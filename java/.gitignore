@@ -31,3 +31,4 @@ hs_err_pid*
 tmp
 target
 dependency-reduced-pom.xml
+*.iml
