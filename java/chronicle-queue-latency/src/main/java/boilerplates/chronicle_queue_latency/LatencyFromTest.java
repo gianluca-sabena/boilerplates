@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-
 /**
  * Results 27/10/2015 running on a MBP
  * 50/90 99/99.9 99.99/99.999 - worst was 1.5 / 27  104 / 3,740  8,000 / 13,890 - 36,700
@@ -94,24 +93,19 @@ public class LatencyFromTest {
   static final int warmup = 500_000;
   final StackSampler sampler = SAMPLING ? new StackSampler() : null;
 
-
-
   public void run(int throughput, int messages) throws IOException, InterruptedException {
     final File tmpDir = new File(OS.TARGET, "LatencyFromTest" + "-" + System.nanoTime());
-    try (ChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(tmpDir)
-        .blockSize(128 << 20)
-        .build()) {
-
+    try (ChronicleQueue queue = SingleChronicleQueueBuilder.fieldlessBinary(tmpDir).blockSize(128 << 20).build()) {
       runTest(queue, throughput, messages);
     }
   }
 
   protected void runTest(ChronicleQueue queue, int throughput, int messages) throws InterruptedException {
-/*
+    /*
         Jvm.setExceptionHandlers(PrintExceptionHandler.ERR,
                 PrintExceptionHandler.OUT,
                 PrintExceptionHandler.OUT);
-*/
+    */
 
     Histogram histogramCo = new Histogram();
     Histogram histogramIn = new Histogram();
@@ -140,9 +134,9 @@ public class LatencyFromTest {
         int counter = 0;
         while (!Thread.currentThread().isInterrupted()) {
           try {
-//                        if (SAMPLING)
-//                            sampler.thread(Thread.currentThread());
-//                        boolean found = tailer.readDocument(myReadMarshallable);
+            //                        if (SAMPLING)
+            //                            sampler.thread(Thread.currentThread());
+            //                        boolean found = tailer.readDocument(myReadMarshallable);
             boolean found;
             try (DocumentContext dc = tailer.readingDocument()) {
               found = dc.isPresent();
@@ -161,7 +155,7 @@ public class LatencyFromTest {
                 histogramIn.sample(now - startIn);
               }
             }
-/*
+            /*
                         if (SAMPLING) {
                             StackTraceElement[] stack = sampler.getAndReset();
                             if (stack != null) {
@@ -204,8 +198,8 @@ public class LatencyFromTest {
         for (int i = -warmup; i < messages; i++) {
           long s0 = System.nanoTime();
           if (s0 < next) {
-            busyLoop:
-            do ; while (System.nanoTime() < next);
+            busyLoop: do
+              ; while (System.nanoTime() < next);
             next = System.nanoTime(); // if we failed to come out of the spin loop on time, reset next.
           }
 
@@ -213,7 +207,8 @@ public class LatencyFromTest {
             sampler.thread(Thread.currentThread());
           }
           long start = System.nanoTime();
-          try (@NotNull DocumentContext dc = appender.writingDocument(false)) {
+          try (@NotNull
+          DocumentContext dc = appender.writingDocument(false)) {
             Bytes<?> bytes2 = dc.wire().bytes();
             bytes2.writeLong(next); // when it should have started -> co
             bytes2.writeLong(start); // when it actually started. -> in
@@ -224,8 +219,7 @@ public class LatencyFromTest {
           if (SAMPLING && time > 1e3 && i > 0) {
             StackTraceElement[] stack = sampler.getAndReset();
             if (stack != null) {
-              if (!stack[0].getClassName().equals(name) &&
-                  !stack[0].getClassName().equals("java.lang.Thread")) {
+              if (!stack[0].getClassName().equals(name) && !stack[0].getClassName().equals("java.lang.Thread")) {
                 StringBuilder sb = new StringBuilder();
                 Jvm.trimStackTrace(sb, stack);
                 stackCount.compute(sb.toString(), (k, v) -> v == null ? 1 : v + 1);
@@ -234,9 +228,7 @@ public class LatencyFromTest {
           }
           next += interval;
         }
-        stackCount.entrySet().stream()
-            .filter(e -> e.getValue() > 1)
-            .forEach(System.out::println);
+        stackCount.entrySet().stream().filter(e -> e.getValue() > 1).forEach(System.out::println);
       } catch (Exception e) {
         e.printStackTrace();
       } finally {
@@ -261,4 +253,3 @@ public class LatencyFromTest {
     System.out.println("co (should have started): " + histogramCo.toMicrosFormat());
   }
 }
-
