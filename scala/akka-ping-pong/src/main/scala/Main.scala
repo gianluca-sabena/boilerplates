@@ -17,15 +17,9 @@ import scala.concurrent.duration._
 object Main extends App {
   val config = ConfigFactory.load()
   val app = config.getString("application.app")
+  val sleepBeforeStart = config.getInt("application.pause-before-start")
 
   import Data._
-
-  //import kamon.Kamon
-  //Kamon.start()
-  // kamon 1.0.x
-  // import kamon.Kamon
-  // import kamon.prometheus.PrometheusReporter
-  // Kamon.addReporter(new PrometheusReporter())
 
   // Init codahale metrics
   val metricRegistry = new MetricRegistry()
@@ -35,9 +29,10 @@ object Main extends App {
   metricRegistry.register("jvm.threads", new ThreadStatesGaugeSet())
 
   // Create an actor system
-  val system = ActorSystem("httpclient")
-
+  val system = ActorSystem("actor-system")
   val log = Logging(system.eventStream, this.getClass.getCanonicalName)
+  log.info(s"Sleep ${sleepBeforeStart} ms ...")
+  Thread.sleep(sleepBeforeStart)
   log.info("----------\n--- START ---\n----------")
 
   // Create actors
