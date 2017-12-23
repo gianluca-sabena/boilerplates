@@ -5,7 +5,7 @@ Boilerplates for my common used languages and libraries
 ## Scala
 
 - [hello-world](./scala/hello-world) -> super simple scala hello world app!
-- [akka-ping-pong](./akka-ping-pong) -> super simple akka app
+- [akka-ping-pong](./scala/akka-ping-pong) -> super simple akka app
 - [akka-http-metrics](./scala/akka-http-metrics) -> Simple http server built with akk-http with jmx metrics exposed with codahale metrics
 
 
