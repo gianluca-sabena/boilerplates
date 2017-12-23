@@ -1,0 +1,5 @@
+*
+!src/main/resources/prometheus-agent.yml
+!aspectjweaver.jar
+!.cache/gitlab-ci/sbt/ivy/cache/org.aspectj/aspectjweaver/jars/*
+!target/scala-2.11/app.jar
