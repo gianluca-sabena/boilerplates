@@ -7,21 +7,15 @@ Exchange messages between two actors
 - Export to jmx
 - Use codahale metrics
 
-## Kamon.io
+## Run
 
-This project uses [kamon.io](http://kamon.io) to track akka metrics
-See/edit [build.sbt](./build.sbt) and [application.conf](./src/main/resources/application.conf) to enable/disable log and jmx reporter
+Run with sbt
+- `sbt run`
 
-Kamon is a **great** project but it poor documented and it use aspectj to rewrite bytecode (this may add some overhead and is not suitable for production environment)
-
-Overview:
-
-- add kamon dependencies
-- add settings to application.conf
-- start kamon from main (before anything else)
-- use sbt-plugin to load aspectj local
-- use a custom assembly strategy to create a uber.jar compatible with aspectjweaver [Gist](https://gist.github.com/colestanfield/fac042d3108b0c06e952) [Issue](https://github.com/kamon-io/Kamon/issues/59)
-- run java in docker with javaagent:/pat-to-aspectj.jar
+Create a docker
+- build uber jar `sbt assembly`
+- build docker image with `docker build -t akka-ping-pong .`
+- run docker with `docker run -t -i akka-ping-pong`
 
 ## Jvisulavm
 
