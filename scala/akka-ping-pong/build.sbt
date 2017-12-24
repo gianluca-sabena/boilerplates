@@ -21,9 +21,9 @@ lazy val commonSettings = Seq(
     "com.typesafe.akka" %% "akka-actor" % akkaVersion,
     "com.typesafe.akka" %% "akka-testkit" % akkaVersion,
     "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-    "io.dropwizard.metrics" % "metrics-core" % "3.1.2",
-    "io.dropwizard.metrics" % "metrics-jvm" % "3.1.2",
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
+    "io.dropwizard.metrics" % "metrics-core" % "3.2.3",
+    "io.dropwizard.metrics" % "metrics-jvm" % "3.2.3",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
     "ch.qos.logback" % "logback-classic" % "1.2.1",
     "org.scalatest" %% "scalatest" % "2.2.6" % "test"
   ),

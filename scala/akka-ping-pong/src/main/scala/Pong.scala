@@ -11,8 +11,8 @@ object Pong {
 class Pong() extends Actor with ActorLogging {
   import Data._
   def receive = {
-    case PingMessage =>
-      sender ! PongMessage
+    case PingMessage(latency: Long) =>
+      sender ! PongMessage(latency)
     case StopMessage =>
       log.info("pong stopped")
       context.stop(self)

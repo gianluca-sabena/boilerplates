@@ -1,8 +1,8 @@
 package boilerplate.akka.pingpong
 
 object Data {
-  case object PingMessage
-  case object PongMessage
+  case class PingMessage(latency: Long)
+  case class PongMessage(latency: Long)
   case object StartMessage
   case object StopMessage
 }

@@ -9,14 +9,17 @@ import boilerplate.akka.pingpong.Data.StartMessage
 import com.codahale.metrics.jvm.{ GarbageCollectorMetricSet, MemoryUsageGaugeSet, ThreadStatesGaugeSet }
 import com.codahale.metrics.{ JmxReporter, JvmAttributeGaugeSet, MetricRegistry, Slf4jReporter }
 import com.typesafe.config.ConfigFactory
-import org.slf4j.LoggerFactory
+import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object Main extends App {
+
   val config = ConfigFactory.load()
   val app = config.getString("application.app")
+  val project = config.getString("application.project")
+  val logger = Logger(s"$project.$app")
   val sleepBeforeStart = config.getInt("application.pause-before-start")
 
   import Data._
@@ -30,10 +33,9 @@ object Main extends App {
 
   // Create an actor system
   val system = ActorSystem("actor-system")
-  val log = Logging(system.eventStream, this.getClass.getCanonicalName)
-  log.info(s"Sleep ${sleepBeforeStart} ms ...")
+  logger.info(s"Sleep ${sleepBeforeStart} ms ...")
   Thread.sleep(sleepBeforeStart)
-  log.info("----------\n--- START ---\n----------")
+  logger.info("\n----------\n--- START ---\n----------")
 
   // Create actors
   val pongActor = system.actorOf(Pong.props(), "pong-actor")
@@ -45,7 +47,7 @@ object Main extends App {
   // In a shell run `# kill -TERM $pid`
   // mesos termination https://github.com/mesosphere/marathon/issues/4323
   scala.sys.addShutdownHook {
-    log.info("----------\n--- SHUTDOWN ---\n----------")
+    logger.info("\n----------\n--- SHUTDOWN ---\n----------")
     println("Terminating...")
     system.terminate()
     Await.result(system.whenTerminated, Duration.create(30, SECONDS))
