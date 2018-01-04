@@ -17,6 +17,14 @@ Create a docker
 - build docker image with `docker build -t akka-ping-pong .`
 - run docker with `docker run -t -i akka-ping-pong`
 
+## Out of memory
+
+Produce java out of memory exception with an unbounded mailbox
+
+Run with `java -XX:+CrashOnOutOfMemoryError -Xmx256m -Dapplication.pause-before-start=45000 -Dapplication.ping-factor=1000  -jar target/scala-2.11/app.jar`
+
+Use Java mission control to see GC pressure from a mailbox
+
 ## Jvisulavm
 
 Jvisualvm can shows Jmx metrics:

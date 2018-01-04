@@ -26,6 +26,7 @@ class Ping(pong: ActorRef) extends Actor with ActorLogging {
   val config = ConfigFactory.load()
   val app = config.getString("application.app")
   val messagesTotal = config.getInt("application.messages")
+  val pingFactor = config.getInt("application.ping-factor")
   import Data._
   import Ping._
   var messages = 1
@@ -40,7 +41,14 @@ class Ping(pong: ActorRef) extends Actor with ActorLogging {
       else {
         messages += 1
         latencyTimer.update(System.nanoTime() - latency, TimeUnit.NANOSECONDS)
-        pong ! PingMessage(System.nanoTime())
+        if (pingFactor == 1) pong ! PingMessage(System.nanoTime())
+        else {
+          // Simulate a MAILBOX overflow!!!
+          for (i <- 1 to pingFactor) {
+            pong ! PingMessage(System.nanoTime())
+          }
+        }
+
       }
     case StopMessage =>
       log.info("ping stopped")
