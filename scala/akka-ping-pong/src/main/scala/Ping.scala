@@ -18,7 +18,7 @@ object Ping {
     .convertRatesTo(TimeUnit.SECONDS)
     .convertDurationsTo(TimeUnit.MICROSECONDS)
     .build
-  val latencyTimer = metricRegistry.timer("latency")
+  var latencyTimer = metricRegistry.timer("latency")
   def props(pong: ActorRef) = Props(new Ping(pong))
 }
 
@@ -27,19 +27,25 @@ class Ping(pong: ActorRef) extends Actor with ActorLogging {
   val app = config.getString("application.app")
   val messagesTotal = config.getInt("application.messages")
   val pingFactor = config.getInt("application.ping-factor")
+  val iterationsTotal = config.getInt("application.iterations")
+  var iteration = 0
+  var startTs = 0L
   import Data._
   import Ping._
-  var messages = 1
+  var messages = 0
+  var messagesSent = 0
   def receive = {
     case StartMessage =>
+      startTs = System.nanoTime()
+      iteration += 1
+      messages = 0
+      messagesSent = 1
+      log.info(s"Start iteration $iteration of $iterationsTotal")
       pong ! PingMessage(System.nanoTime())
     case PongMessage(latency: Long) =>
-      if (messages % 1000 == 0) log.debug("Received 1000 messages")
-      if (messages == messagesTotal) {
-        self ! StopMessage
-      }
-      else {
-        messages += 1
+      messages += 1
+      if (messages <= messagesTotal) {
+        messagesSent += pingFactor
         latencyTimer.update(System.nanoTime() - latency, TimeUnit.NANOSECONDS)
         if (pingFactor == 1) pong ! PingMessage(System.nanoTime())
         else {
@@ -48,12 +54,19 @@ class Ping(pong: ActorRef) extends Actor with ActorLogging {
             pong ! PingMessage(System.nanoTime())
           }
         }
-
       }
-    case StopMessage =>
+      else if (messages == messagesSent) self ! NextIteration
+
+    case NextIteration =>
       log.info("ping stopped")
-      pong ! StopMessage
+      val elapsed = System.nanoTime() - startTs
       slf4jReporter.report()
+      log.info(s" Processed ${messagesTotal} messages in ${elapsed / 1000000} milliseconds")
+      Thread.sleep(1000)
+      if (iteration < iterationsTotal) self ! StartMessage
+      else self ! StopMessage
+
+    case StopMessage =>
       context.stop(self)
       context.system.terminate()
 

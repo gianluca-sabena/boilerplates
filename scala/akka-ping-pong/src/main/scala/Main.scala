@@ -1,6 +1,8 @@
 package boilerplate.akka.pingpong
 
+import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeUnit
+import javax.management.{ MBeanServer, ObjectName }
 
 import akka.actor.{ ActorSystem, Props }
 import akka.event.Logging
@@ -37,6 +39,11 @@ object Main extends App {
   Thread.sleep(sleepBeforeStart)
   logger.info("\n----------\n--- START ---\n----------")
 
+  // mbean
+  //  val orderTrackerBean = new OrderTracker
+  //  val mbs: MBeanServer = ManagementFactory.getPlatformMBeanServer()
+  //  val mBeanName: ObjectName = new ObjectName(s"com.tsoft.playingWithLogback.it:type=Tracking,path=/")
+  //  mbs.registerMBean(orderTrackerBean, mBeanName)
   // Create actors
   val pongActor = system.actorOf(Pong.props(), "pong-actor")
   val pingActor = system.actorOf(Ping.props(pongActor), "ping-actor")
@@ -48,10 +55,12 @@ object Main extends App {
   // mesos termination https://github.com/mesosphere/marathon/issues/4323
   scala.sys.addShutdownHook {
     logger.info("\n----------\n--- SHUTDOWN ---\n----------")
-    println("Terminating...")
+    logger.info("Terminating...")
     system.terminate()
     Await.result(system.whenTerminated, Duration.create(30, SECONDS))
-    println("Terminated... Bye")
+    logger.info(s"Sleep ${sleepBeforeStart} ms ...")
+    Thread.sleep(sleepBeforeStart)
+    logger.info("Terminated... Bye")
   }
 }
 

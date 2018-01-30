@@ -1,6 +1,7 @@
 package boilerplate.akka.pingpong
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import com.typesafe.config.ConfigFactory
 
 object Pong {
 

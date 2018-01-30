@@ -5,4 +5,5 @@ object Data {
   case class PongMessage(latency: Long)
   case object StartMessage
   case object StopMessage
+  case object NextIteration
 }
