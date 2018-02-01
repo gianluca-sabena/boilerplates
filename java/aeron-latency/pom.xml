@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>boilerplates</groupId>
+    <artifactId>aeron-latency</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  <build>
+    <plugins>
+      <plugin>
+      <groupId>org.codehaus.mojo</groupId>
+      <artifactId>exec-maven-plugin</artifactId>
+      <version>1.6.0</version>
+      <executions>
+        <execution>
+          <id>ping</id>
+          <goals>
+            <goal>exec</goal>
+          </goals>
+          <configuration>
+            <mainClass>boilerplates.aeron.latency.PingThread</mainClass>
+            <systemProperties>
+              <systemProperty>
+                <key>aeron.sample.embeddedMediaDriver</key>
+                <value>true</value>
+              </systemProperty>
+              <systemProperty>
+                <key>aeron.sample.messages</key>
+                <value>10000000</value>
+              </systemProperty>
+              <systemProperty>
+                <key>aeron.sample.messageLength</key>
+                <value>1024</value>
+              </systemProperty>
+
+            </systemProperties>
+          </configuration>
+        </execution>
+        <execution>
+          <id>pong</id>
+          <goals>
+            <goal>exec</goal>
+          </goals>
+          <configuration>
+            <mainClass>boilerplates.aeron.latency.PongThread</mainClass>
+            <systemProperties>
+              <systemProperty>
+                <key>aeron.sample.embeddedMediaDriver</key>
+                <value>true</value>
+              </systemProperty>
+            </systemProperties>
+          </configuration>
+        </execution>
+      </executions>
+    </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.7.0</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.3</version>
+        <configuration>
+          <!-- put your configurations here -->
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+      <dependency>
+        <groupId>io.aeron</groupId>
+        <artifactId>aeron-all</artifactId>
+        <version>1.7.0</version>
+      </dependency>
+    </dependencies>
+
+</project>
