@@ -7,27 +7,28 @@ import com.codahale.metrics.MetricRegistry
 import com.typesafe.config.ConfigFactory
 
 object Ping {
-  val metricRegistry = new MetricRegistry()
+  //  val metricRegistry = new MetricRegistry()
 
   import com.codahale.metrics.Slf4jReporter
   import org.slf4j.LoggerFactory
   import java.util.concurrent.TimeUnit
 
-  val slf4jReporter = Slf4jReporter.forRegistry(metricRegistry)
-    .outputTo(LoggerFactory.getLogger("boilerplate.grpc.metrics"))
-    .convertRatesTo(TimeUnit.SECONDS)
-    .convertDurationsTo(TimeUnit.MICROSECONDS)
-    .build
-  var latencyTimer = metricRegistry.timer("latency")
+  //  val slf4jReporter = Slf4jReporter.forRegistry(metricRegistry)
+  //    .outputTo(LoggerFactory.getLogger("boilerplate.grpc.metrics"))
+  //    .convertRatesTo(TimeUnit.SECONDS)
+  //    .convertDurationsTo(TimeUnit.MICROSECONDS)
+  //    .build
+  //var latencyTimer = metricRegistry.timer("latency")
   def props(pong: ActorRef) = Props(new Ping(pong))
 }
 
-class Ping(pong: ActorRef) extends Actor with ActorLogging {
+class Ping(pong: ActorRef) extends Actor with ActorLogging with Metric {
   val config = ConfigFactory.load()
   val app = config.getString("application.app")
   val messagesTotal = config.getInt("application.messages")
   val pingFactor = config.getInt("application.ping-factor")
   val iterationsTotal = config.getInt("application.iterations")
+  val latencyTimer = getMetricTimer("latency")
   var iteration = 0
   var startTs = 0L
   import Data._
@@ -60,7 +61,8 @@ class Ping(pong: ActorRef) extends Actor with ActorLogging {
     case NextIteration =>
       log.info("ping stopped")
       val elapsed = System.nanoTime() - startTs
-      slf4jReporter.report()
+      //slf4jReporter.report()
+      slf4jReport()
       log.info(s" Processed ${messagesTotal} messages in ${elapsed / 1000000} milliseconds")
       Thread.sleep(1000)
       if (iteration < iterationsTotal) self ! StartMessage

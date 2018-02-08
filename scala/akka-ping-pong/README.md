@@ -5,14 +5,17 @@ Exchange messages between two actors
 ## Metrics
 
 - Export to jmx
-- Use codahale metrics
+- Use codahale metrics with akka actor system extension
+
+TODO: Separate and improve jmx and codahale mailbox objects
 
 ## Run
 
 Run with sbt
 - `sbt run`
 
-Create a docker
+Create a docker and:
+
 - build uber jar `sbt assembly`
 - build docker image with `docker build -t akka-ping-pong .`
 - run docker with `docker run -t -i akka-ping-pong`
@@ -25,6 +28,20 @@ Run with `java -XX:+CrashOnOutOfMemoryError -Xmx256m -Dapplication.pause-before-
 
 Use Java mission control to see GC pressure from a mailbox
 
+## Logging
+
+SLF4J is the logging interface
+logback is a Logging backend compatible with SLF4J
+
+- use scala logging (logging library wrapping SLF4J) from outside of an actor class/library
+- use akka-slf4j inside actors
+
+## Java mission control
+
+Java profile with Java Mission Control
+
+... todo ... debug memory leaks..
+
 ## Jvisulavm
 
 Jvisualvm can shows Jmx metrics:
@@ -34,10 +51,4 @@ Jvisualvm can shows Jmx metrics:
 - Get random Jmx/Jvisual port from DCOS web UI
 - Open JvisualVm and click on "Add jmx connection" and select "do not require ssl connection"
 
-## Logging
 
-SLF4J is the logging interface
-logback is a Logging backend compatible with SLF4J
-
-- use scala logging (logging library wrapping SLF4J) from outside of an actor class/library
-- use akka-slf4j inside actors

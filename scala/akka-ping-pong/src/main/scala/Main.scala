@@ -26,13 +26,6 @@ object Main extends App {
 
   import Data._
 
-  // Init codahale metrics
-  val metricRegistry = new MetricRegistry()
-  metricRegistry.register("jvm.attribute", new JvmAttributeGaugeSet())
-  metricRegistry.register("jvm.gc", new GarbageCollectorMetricSet())
-  metricRegistry.register("jvm.memory", new MemoryUsageGaugeSet())
-  metricRegistry.register("jvm.threads", new ThreadStatesGaugeSet())
-
   // Create an actor system
   val system = ActorSystem("actor-system")
   logger.info(s"Sleep ${sleepBeforeStart} ms ...")
