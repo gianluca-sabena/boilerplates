@@ -20,3 +20,7 @@ Boilerplates for my common used languages and libraries
 ## Python
 
 - [hello world cli](./python/hello-world-cli) -> hello world with command line args
+
+## Vagrant
+
+- [centos7 cluster](./vagrant/centos-cluster/) -> centos7 cluster with ansible provisioner
