@@ -8,6 +8,7 @@ Category theory <https://bartoszmilewski.com/2011/01/09/monads-for-the-curious-p
 
 Java code <https://dzone.com/articles/functor-and-monad-examples-in-plain-java>
 
+Java code <https://www.slideshare.net/mariofusco/monadic-java>
 
 ## Run
 
