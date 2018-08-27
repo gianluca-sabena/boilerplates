@@ -1,10 +1,11 @@
 package boilerplates;
 
 import java.util.function.Function;
+import java.util.Objects;
 
-// interface Monad<T,M extends Monad<?,?>> extends Functor<T,M> {
-//   M flatMap(Function<T,M> f);
-// }
+/**
+ * Java monad from https://dzone.com/articles/functor-and-monad-examples-in-plain-java
+ */
 
 interface Monad<T, M extends Monad<?, ?>> {
   <R> M map(Function<T, R> f);
@@ -37,6 +38,24 @@ class MOptional<T> implements Monad<T, MOptional<?>> {
 
   public static <T> MOptional<T> empty() {
     return new MOptional<T>(null);
+  }
+
+  /**
+   * Required in order to test Monad laws <https://gist.github.com/ms-tg/7420496#file-jdk8_optional_monad_laws-java>
+   * From java.util.Optional
+   **/
+  @Override
+  public boolean equals(Object obj) {
+      if (this == obj) {
+          return true;
+      }
+
+      if (!(obj instanceof MOptional)) {
+          return false;
+      }
+
+      MOptional<?> other = (MOptional<?>) obj;
+      return Objects.equals(valueOrNull, other.valueOrNull);
   }
 
 

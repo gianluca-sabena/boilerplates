@@ -2,6 +2,11 @@ package boilerplates;
 
 import java.util.function.Function;
 
+/**
+ * Based on https://www.slideshare.net/mariofusco/monadic-java
+ * Plus some from https://dzone.com/articles/functor-and-monad-examples-in-plain-java
+ */
+
 class Optional<T> {
   //private static final Optional<?> EMPTY = new Optional<>(null);
 
