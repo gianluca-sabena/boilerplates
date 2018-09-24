@@ -28,19 +28,10 @@ public class App {
         try {
             KubernetesClient client = new DefaultKubernetesClient(config);
             Crd dummyCrd = new Crd(client);
-            dummyCrd.deleteDummyCrd();
-            Thread.sleep(1000);
-            dummyCrd.createDummyCrd();
-            Thread.sleep(1000);
-            dummyCrd.createDummyObj();
-            dummyCrd.watchCrd();
-            //dummyCrd.watchAll();
-            logger.debug("Watching...");
-            Thread.sleep(1000);
-            //dummyCrd.createDummyObj();
-            //dummyCrd.createDummyObj();
-            //dummyCrd.list();
-            //List.list(client);
+            dummyCrd.createDummyObj("foo");
+            dummyCrd.createDummyObj("bar");
+            dummyCrd.listDummyObj();
+            //dumyCrd.deleteDummyObj();
             System.in.read();
         } catch (Exception e) {
             logger.error(e.getMessage(), e);

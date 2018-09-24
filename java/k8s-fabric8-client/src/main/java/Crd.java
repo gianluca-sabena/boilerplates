@@ -18,6 +18,7 @@
 import java.util.function.*;
 import java.util.concurrent.*;
 
+import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.RootPaths;
 import io.fabric8.kubernetes.api.model.apiextensions.CustomResourceDefinition;
@@ -54,32 +55,57 @@ public class Crd {
   private static String K8S_NAMESPACE = "default";
   private KubernetesClient client;
   private CustomResourceDefinition dummyCRD;
-  private Dummy dummyObj;
   private NonNamespaceOperation<Dummy, DummyList, DoneableDummy, Resource<Dummy, DoneableDummy>> dummyClient;
+
+  public Crd(KubernetesClient client) {
+    // When you can say lucky!
+    // https://github.com/fabric8io/kubernetes-client/issues/1099#issuecomment-413622028
+    // and https://groups.google.com/forum/#!topic/fabric8/Q5_aSYyaAtA
+    io.fabric8.kubernetes.internal.KubernetesDeserializer
+        .registerCustomKind(DUMMY_CRD_GROUP + "/" + DUMMY_CRD_VERSION + "#Dummy", Dummy.class);
+    this.client = client;
+    // build CRD
+    this.dummyCRD = buildDummyCrd();
+    dumpYaml(dummyCRD);
+    this.dummyClient = createDummyClient();
+    // start watchind this crd for changes
+    // deleteDummyCrd();
+    if (findDummyCrd() == false)
+      createDummyCrd();
+    this.watchCrd();
+  }
 
   private CustomResourceDefinition buildDummyCrd() {
     return new CustomResourceDefinitionBuilder().withApiVersion("apiextensions.k8s.io/v1beta1").withNewMetadata()
-        .withName(DUMMY_CRD_NAME).endMetadata().withNewSpec().withGroup(DUMMY_CRD_GROUP).withVersion("v1")
+        .withName(DUMMY_CRD_NAME).endMetadata().withNewSpec().withGroup(DUMMY_CRD_GROUP).withVersion(DUMMY_CRD_VERSION)
         .withScope("Namespaced").withNewNames().withKind("Dummy").withShortNames("dummy").withPlural("dummies")
         .endNames().endSpec().build();
   }
 
-  private void printDummyCrd() {
+  private static void dumpYaml(HasMetadata obj) {
     try {
-      logger.debug("build CRD " + SerializationUtils.dumpAsYaml(this.dummyCRD));
+      logger.debug("Dump obj: '" + obj.getMetadata().getName() + "' yaml: " + SerializationUtils.dumpAsYaml(obj));
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }
   }
 
-  public Crd(KubernetesClient client) {
-    this.client = client;
-    this.dummyCRD = buildDummyCrd();
-    this.dummyClient = createDummyClient();
-    this.dummyObj = buildDummyObj();
-    // When you ca say lucky! https://github.com/fabric8io/kubernetes-client/issues/1099#issuecomment-413622028
-    io.fabric8.kubernetes.internal.KubernetesDeserializer.registerCustomKind(DUMMY_CRD_GROUP + "/" + DUMMY_CRD_VERSION + "#Dummy", Dummy.class);
-    printDummyCrd();
+  private void watchCrd() {
+    logger.info("Watching for changes to Dummies");
+    // use global crd version resource instead objCrd
+    dummyClient.withResourceVersion(dummyCRD.getMetadata().getResourceVersion()).watch(new Watcher<Dummy>() {
+      @Override
+      public void eventReceived(Action action, Dummy resource) {
+        logger.info("WATCH: '" + action + "' for: " + resource);
+        if (resource.getSpec() == null) {
+          logger.error("No Spec for resource " + resource);
+        }
+      }
+
+      @Override
+      public void onClose(KubernetesClientException cause) {
+      }
+    });
   }
 
   public void logRootPaths() {
@@ -96,14 +122,14 @@ public class Crd {
     }
   }
 
-  public void deleteDummyCrd() {
+  private void deleteDummyCrd() {
     Boolean ret = client.customResourceDefinitions().delete(dummyCRD);
     logger.debug("Delete crd: " + ret);
   }
 
-  public void createDummyCrd() {
-    client.customResourceDefinitions().create(dummyCRD);
-    logger.debug("Create crd");
+  private void createDummyCrd() {
+    CustomResourceDefinition crd = client.customResourceDefinitions().create(dummyCRD);
+    logger.debug("Create crd: " + crd);
   }
 
   private NonNamespaceOperation<Dummy, DummyList, DoneableDummy, Resource<Dummy, DoneableDummy>> createDummyClient() {
@@ -114,105 +140,74 @@ public class Crd {
     return dummyClient;
   }
 
-  private void listDummyObj() {
-    // CustomResourceList<Dummy> dummyList = dummyClient.list();
-    // List<Dummy> items = dummyList.getItems();
-    // System.out.println(" found " + items.size() + " dummies");
-    // for (Dummy item : items) {
-    // System.out.println(" " + item);
-    // }
+  public void listDummyObj() {
+    CustomResourceList<Dummy> dummyList = dummyClient.list();
+    List<Dummy> items = dummyList.getItems();
+    logger.info("Found " + items.size() + " dummy Object(s)");
+    for (Dummy item : items) {
+      logger.info("Dummy Object: " + item);
+    }
+  }
+  public void deleteDummyObj() {
+    CustomResourceList<Dummy> dummyList = dummyClient.list();
+    List<Dummy> items = dummyList.getItems();
+    dummyClient.delete(items);
+
+
   }
 
-  private Dummy buildDummyObj() {
+
+  private Dummy buildDummyObj(String name) {
     Dummy dummy = new Dummy();
     ObjectMeta metadata = new ObjectMeta();
-    metadata.setName("foo");
+    metadata.setName(name);
     dummy.setMetadata(metadata);
+    dummy.setApiVersion(DUMMY_CRD_VERSION);
     DummySpec dummySpec = new DummySpec();
     Date now = new Date();
     dummySpec.setBar("beer: " + now);
     dummySpec.setFoo("cheese: " + now);
     dummy.setSpec(dummySpec);
-    try {
-      logger.debug("Dummy crd obj: " + SerializationUtils.dumpAsYaml(dummy));
-    } catch (Exception e) {
-      logger.error(e.getMessage(), e);
-    }
     return dummy;
   }
 
-  public Dummy createDummyObj() {
+  public Dummy createDummyObj(String name) {
+    Dummy dummyObj = buildDummyObj(name);
+    dumpYaml(dummyObj);
     Dummy created = dummyClient.createOrReplace(dummyObj);
-    logger.info("Upserted " + dummyObj);
+    logger.info("Create Dummy obj: " + created);
     return created;
   }
 
-  public void watchAll() {
-    Watch watch = client.replicationControllers().inNamespace(K8S_NAMESPACE).watch(new Watcher<ReplicationController>() {
-      @Override
-      public void eventReceived(Action action, ReplicationController resource) {
-        logger.info("{}: {}", action, resource.getMetadata().getResourceVersion());
-      }
-
-      @Override
-      public void onClose(KubernetesClientException e) {
-        logger.debug("Watcher onClose");
-        if (e != null) {
-          logger.error(e.getMessage(), e);
-        }
-      }
-    });
-
+  public Boolean deleteDummyObj(List<Dummy> items) {
+    return dummyClient.delete(items);
   }
 
-  public void watchCrd() {
-    logger.info("Watching for changes to Dummies");
-    // use global crd version resource instead objCrd
-    dummyClient.withResourceVersion(dummyObj.getMetadata().getResourceVersion()).watch(new Watcher<Dummy>() {
-      @Override
-      public void eventReceived(Action action, Dummy resource) {
-        logger.info("==> ACTION watched!");
-        // logger.info("==> " + action + " for " + resource);
-        // if (resource.getSpec() == null) {
-        // logger.error("No Spec for resource " + resource);
-        // }
-      }
-
-      @Override
-      public void onClose(KubernetesClientException cause) {
-      }
-    });
-  }
-
-  public void list() {
+  private boolean findDummyCrd() {
+    boolean ret = false;
     try {
       CustomResourceDefinitionList crds = client.customResourceDefinitions().list();
       List<CustomResourceDefinition> crdsItems = crds.getItems();
-      System.out.println("Found " + crdsItems.size() + " CRD(s)");
+      logger.debug("Found " + crdsItems.size() + " CRD(s)");
 
       for (CustomResourceDefinition crd : crdsItems) {
         ObjectMeta metadata = crd.getMetadata();
         if (metadata != null) {
           String name = metadata.getName();
-          System.out.println("    " + name + " => " + metadata.getSelfLink());
+          logger.debug("Found CRD with name: '" + name + "' => " + metadata.getSelfLink());
           if (DUMMY_CRD_NAME.equals(name)) {
+            logger.info("CRD already present!");
             dummyCRD = crd;
+            ret = true;
           }
         }
       }
-      // if (dummyCRD != null) {
-      // System.out.println("Found CRD: " + dummyCRD.getMetadata().getSelfLink());
-      // } else {
-      // System.out.println("Created CRD " + dummyCRD.getMetadata().getName());
-      // }
-
-      // lets create a client for the CRD
-
     } catch (KubernetesClientException e) {
       logger.error(e.getMessage(), e);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }
+    return ret;
   }
 
 }

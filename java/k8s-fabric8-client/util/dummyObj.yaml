@@ -1,0 +1,7 @@
+kind: "Dummy"
+apiVersion: "demo.fabric8.io/v1"
+metadata:
+  name: "console"
+spec:
+  foo: "cheese: Mon Sep 24 16:42:22 CEST 2018"
+  bar: "beer: Mon Sep 24 16:43:22 CEST 2018"

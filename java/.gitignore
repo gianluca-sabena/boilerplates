@@ -3,6 +3,8 @@
 #
 .gradle
 build/
+# Created by Visual Studio Code
+bin/
 
 # Ignore Gradle GUI config
 gradle-app.setting
