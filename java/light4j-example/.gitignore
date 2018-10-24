@@ -1,0 +1,59 @@
+generator
+openapi-petstore
+openapi-proxy
+data-job/
+
+.vscode
+#
+# Gradle - https://github.com/github/gitignore/blob/master/Gradle.gitignore
+#
+.gradle
+build/
+# Created by Visual Studio Code
+bin/
+
+# Ignore Gradle GUI config
+gradle-app.setting
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+
+# Cache of project
+.gradletasknamecache
+
+# # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
+# gradle/wrapper/gradle-wrapper.properties
+#
+# Source https://github.com/github/gitignore/blob/master/Java.gitignore
+#
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+# Other
+.settings
+.classpath
+.project
+tmp
+target
+dependency-reduced-pom.xml
+*.iml

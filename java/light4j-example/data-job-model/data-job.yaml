@@ -1,0 +1,107 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: light-proxy demo backend service
+  license:
+    name: MIT
+servers:
+  - url: 'https://proxy.networknt.com/v1'
+paths:
+  /config/s3/bucket/{id}:
+    get:
+      summary: Gets a bucket by ID.
+      operationId: getBucketAclById
+      parameters:
+        - name: id
+          in: path
+          description: Bucket ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/S3Acl'
+      security:
+      - config_auth:
+          - config.r
+          - config.w
+  /config/s3/bucket:
+    get:
+      summary: Gets a bucket by ID.
+      operationId: getBucketAcl
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/S3Acl'
+    post:
+      summary: Add bucket tocken and acl
+      operationId: addBucketAcl
+      requestBody:
+        description: Key value pair
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/S3Acl'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                description: generated uuid for this bucket config
+                properties:
+                  bucket:
+                    type: string
+                    format: uuid
+      security:
+      - config_auth:
+          - config.r
+          - config.w
+
+components:
+  securitySchemes:
+    config_auth:
+      type: oauth2
+      description: This API uses OAuth 2 with the client credential grant flow.
+      flows:
+        clientCredentials:
+          tokenUrl: 'https://localhost:6882/token'
+          scopes:
+            config.w: write
+            config.r: read
+  schemas:
+    S3Acl:
+      type: object
+      required:
+        - token
+        - buckets
+      properties:
+        token:
+          type: string
+          description: generated auth token
+        buckets:
+          type: array
+          description: list of bucket name and acl
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              acl:
+                type: string
+      example:
+        token: mytoken
+        buckets: [ {
+          name: "bucket_name_1",
+          acl: "TODO ACL"
+        }]
