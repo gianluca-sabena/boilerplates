@@ -117,10 +117,10 @@ public class Crd {
     }
   }
 
-  private void deleteDummyCrd() {
-    Boolean ret = client.customResourceDefinitions().delete(dummyCRD);
-    logger.debug("Delete crd: " + ret);
-  }
+  // private void deleteDummyCrd() {
+  //   Boolean ret = client.customResourceDefinitions().delete(dummyCRD);
+  //   logger.debug("Delete crd: " + ret);
+  // }
 
   private void createDummyCrd() {
     CustomResourceDefinition crd = client.customResourceDefinitions().create(dummyCRD);
