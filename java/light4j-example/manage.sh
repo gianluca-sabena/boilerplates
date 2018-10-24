@@ -72,7 +72,7 @@ function generateProxy() {
 function generateDatajob() {
 	mkdir -p ${SCRIPT_DIR}/data-job/model
 	CODEGEN_JAR="${SCRIPT_DIR}/generator/codegen-cli/target/codegen-cli.jar"
-	java -jar $CODEGEN_JAR  -f openapi -o ${SCRIPT_DIR}/data-job -m ${SCRIPT_DIR}/data-job/model/data-job.yaml -c ${SCRIPT_DIR}/data-job/model/data-job-config.json
+	java -jar $CODEGEN_JAR  -f openapi -o ${SCRIPT_DIR}/data-job -m ${SCRIPT_DIR}/data-job-model/data-job.yaml -c ${SCRIPT_DIR}/data-job-model/data-job-config.json
 }
 
 parseCli "$@"
