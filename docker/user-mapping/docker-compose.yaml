@@ -1,0 +1,11 @@
+version: '3.3'
+services:
+  box:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: box-test:latest
+    command: "/bin/bash -c 'echo 1 > /app/test.txt && cat /app/test.txt '"
+    user: ${CURRENT_UID}
+    volumes:
+    - ./:/app
