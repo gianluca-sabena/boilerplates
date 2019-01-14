@@ -2,10 +2,18 @@
 ---
 - hosts:
   - all
+  become: yes
+  become_user: root
   gather_facts: False # Faster
 
   tasks:
-  - ping:
+  #- ping:
+  - shell: whoami
+    register: out
+
+  - debug: msg="{{ out.stdout }}"
+
+  - debug: msg="{{ out.stderr }}"
 
 # Induce an exception to see what happens
 # - ping:
