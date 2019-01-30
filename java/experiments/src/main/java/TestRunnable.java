@@ -7,7 +7,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class TestRunnable 
 {
-    private static final int MESSAGE_LENGTH = 256;
     public static void main( String[] args )
     {
         System.out.println( "Hello World!!!" );

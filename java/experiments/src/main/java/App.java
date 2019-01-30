@@ -25,13 +25,12 @@ public class App {
         //Integer b = test.apply(1);
 
         Integer two = add1.apply(1); //yields 2
+        System.out.println(two);
         String answer = concat.apply("0 + 1 = "); //yields "0 + 1 = 1"
-
+        System.out.println(answer);
+        
         BinaryOperator<Integer> sum = (a,b) -> a + b;
         Integer res = sum.apply(1,2); // yields 3
-        
-
-
-
+        System.out.println(res);
     }
 }
