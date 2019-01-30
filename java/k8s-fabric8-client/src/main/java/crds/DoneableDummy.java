@@ -21,7 +21,7 @@ import io.fabric8.kubernetes.client.CustomResourceDoneable;
 /**
  */
 public class DoneableDummy extends CustomResourceDoneable<Dummy> {
-  public DoneableDummy(Dummy resource, Function function) {
+  public DoneableDummy(Dummy resource, Function<Dummy,Dummy> function) {
     super(resource, function);
   }
 }

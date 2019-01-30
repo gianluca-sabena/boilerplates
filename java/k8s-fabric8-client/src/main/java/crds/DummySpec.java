@@ -9,7 +9,8 @@ import io.fabric8.kubernetes.api.model.KubernetesResource;
 @JsonDeserialize(
     using = JsonDeserializer.None.class
 )
-public class DummySpec implements KubernetesResource {
+public class DummySpec implements KubernetesResource<Dummy> {
+  private static final long serialVersionUID = 1L;
   private String foo;
   private String bar;
 
