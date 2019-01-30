@@ -1,14 +1,12 @@
-package boilerplates;
-
 import java.lang.Runnable;
 
 public class MyRunnable implements Runnable {
   String id = "";
   int iteration = 1;
 
-  public MyRunnable(String id, int i) {
+  public MyRunnable(String id, int iteration) {
     this.id = id;
-    this.iteration = i;
+    this.iteration = iteration;
   }
 
   public void run() {

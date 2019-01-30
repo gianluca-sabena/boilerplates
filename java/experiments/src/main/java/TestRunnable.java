@@ -1,5 +1,3 @@
-package boilerplates;
-
 import java.util.concurrent.*;
 import java.util.concurrent.TimeUnit;
 
@@ -12,16 +10,9 @@ public class TestRunnable
     private static final int MESSAGE_LENGTH = 256;
     public static void main( String[] args )
     {
-        final long rate = Math.round(1000 / 23424234 * 1000);
-        final double th = rate * MESSAGE_LENGTH;
-        float th2 =  256.0f / 1024 / 1024 ;
-        System.out.printf("Float %f", th2 );
-        //System.out.printf(" Rate: %d msg/s - Data: %f byte/s - %f",rate, th, th2 );
         System.out.println( "Hello World!!!" );
-
+        
         // Thread
-
-
         ExecutorService executor = Executors.newFixedThreadPool(4);
         //executor.execute(() -> System.out.println("Zero - Lambda"));
         

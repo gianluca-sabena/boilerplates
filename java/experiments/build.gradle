@@ -7,23 +7,24 @@
  */
 
 plugins {
-    // Apply the java plugin to add support for Java
-    id 'java'
+  // Apply the java plugin to add support for Java
+  id 'java'
 
-    // Apply the application plugin to add support for building an application
-    id 'application'
+  // Apply the application plugin to add support for building an application
+  id 'application'
 }
 
 // Define the main class for the application
-mainClassName = 'App'
+// mainClassName = 'App'
+mainClassName = 'TestRunnable'
 
 dependencies {
-    // This dependency is found on compile classpath of this component and consumers.
-    compile 'com.google.guava:guava:23.0'
+  // This dependency is found on compile classpath of this component and consumers.
+  compile 'com.google.guava:guava:23.0'
 
-    // Use JUnit test framework
-    // testCompile 'junit:junit:4+'
-    // testCompile 'org.assertj:assertj-core:3.11.1'
+  // Use JUnit test framework
+  // testCompile 'junit:junit:4+'
+  // testCompile 'org.assertj:assertj-core:3.11.1'
 	testCompile('org.junit.jupiter:junit-jupiter-api:5.3.1')
 	testCompile('org.junit.jupiter:junit-jupiter-params:5.3.1')
 	testRuntime('org.junit.jupiter:junit-jupiter-engine:5.3.1')    
@@ -39,7 +40,7 @@ test {
 
 // In this section you declare where to find the dependencies of your project
 repositories {
-    // Use jcenter for resolving your dependencies.
-    // You can declare any Maven/Ivy/file repository here.
-    jcenter()
+  // Use jcenter for resolving your dependencies.
+  // You can declare any Maven/Ivy/file repository here.
+  jcenter()
 }
