@@ -67,6 +67,10 @@ test {
     //events 'passed', 'failed', 'skipped', 'started', 'standard_out', 'standard_error'
 		events "passed", "skipped", "failed"
 	}
+  // only run this tests
+  filter {
+    includeTestsMatching "com.*"
+  }
   // afterSuite { desc, result ->
   //     if (!desc.parent) {
   //         println "\nTest result: ${result.resultType}"
