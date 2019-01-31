@@ -1,3 +1,3 @@
 # Boilerplates
 
-A collection of boilerplates and tutorial
+A collection of boilerplates and tutorials
