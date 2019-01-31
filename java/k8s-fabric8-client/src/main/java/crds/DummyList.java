@@ -18,4 +18,6 @@ package crds;
 import io.fabric8.kubernetes.client.CustomResourceList;
 
 public class DummyList extends CustomResourceList<Dummy> {
+
+  private static final long serialVersionUID = 1L;
 }

@@ -61,9 +61,21 @@ jar {
 // Junit5
 test {
 	useJUnitPlatform()
+  // always run full test suite
+  outputs.upToDateWhen {false}
 	testLogging {
+    //events 'passed', 'failed', 'skipped', 'started', 'standard_out', 'standard_error'
 		events "passed", "skipped", "failed"
 	}
+  // afterSuite { desc, result ->
+  //     if (!desc.parent) {
+  //         println "\nTest result: ${result.resultType}"
+  //         println "Test summary: ${result.testCount} tests, " +
+  //                 "${result.successfulTestCount} succeeded, " +
+  //                 "${result.failedTestCount} failed, " +
+  //                 "${result.skippedTestCount} skipped"
+  //     }
+  // }
 }
 
 // Define the main class for the application
