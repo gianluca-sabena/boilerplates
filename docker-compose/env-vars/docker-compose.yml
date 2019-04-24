@@ -1,0 +1,7 @@
+version: '3'
+services:
+  test:
+    image: "${IMAGE}"
+    command: ["/bin/sh", "-c", "echo 'hello world' > hello-world.txt && python -m SimpleHTTPServer 8000"]    
+    ports:
+     - "8000:8000"

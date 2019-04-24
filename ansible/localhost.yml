@@ -1,0 +1,10 @@
+---
+# From https://www.tricksofthetrades.net/2017/10/02/ansible-local-playbooks/
+- name: run the playbook tasks on the localhost
+  hosts: 127.0.0.1
+  connection: local
+  become: no
+  gather_facts: False # Faster
+  tasks:
+  - name: print out the hostname of target
+    command: hostname
