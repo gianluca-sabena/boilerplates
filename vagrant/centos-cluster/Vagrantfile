@@ -13,6 +13,24 @@ $share_folder = false # Require vagrant-vbguest plugin
 $update_etc_hostname = true # Must be enbaled for openshift - Require vagrant-hostmanager plugin
 $vm_gui = false
 
+# # https://github.com/hashicorp/vagrant/issues/4015#issuecomment-131440075
+# Vagrant is 'state declarative' cant react to single state change, so we need to remove sata controller manually
+# Manual remove sata controller VBoxManage storagectl VM_NAME_OR_ID --remove --name 'SATA Controller'
+# Sata or disk error:
+# - vagrant: stop all vm
+# - from vbox gui: remove sata driver, detach disk and delete disk
+# - delete folder sata_hdd
+# - vagrant reload 
+def add_hdd(vm_name, vb)
+  root_dir = File.dirname(File.expand_path(__FILE__))
+  file_disk = File.join(root_dir, "sata_hdd/#{vm_name}_hdd1.vdi")
+  unless File.exist?(File.expand_path(file_disk))
+    vb.customize ["storagectl", :id, "--name", "SATA Controller", "--add", "sata"]
+    vb.customize ['createhd', '--filename', File.expand_path(file_disk), '--variant', 'Fixed', '--size', 5 * 1024]
+  end
+  vb.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', File.expand_path(file_disk)]
+end
+
 Vagrant.configure("2") do |config|
   # always use Vagrants insecure key
   config.ssh.insert_key = false
@@ -48,6 +66,7 @@ Vagrant.configure("2") do |config|
     config.vm.define vm_name = "%s-%02d" % [$instance_name_prefix, i] do |config|
       config.vm.hostname = vm_name
       config.vm.provider :virtualbox do |vb|
+        add_hdd(vm_name, vb)
         vb.gui = $vm_gui
         vb.memory = $vm_memory
         vb.cpus = $vm_cpus
