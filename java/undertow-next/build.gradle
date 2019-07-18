@@ -30,7 +30,7 @@ sourceCompatibility = 10
 mainClassName = 'com.boilerplates.App'
 
 dependencies {
-    compile ('io.undertow:undertow-core:2.0.13.Final') 
+    compile ('io.undertow:undertow-core:2.0.22.Final') 
     // Fix java 9 error https://issues.jboss.org/browse/UNDERTOW-1355
     compile ('org.jboss.xnio:xnio-api:3.6.5.Final') {
        exclude group: 'org.jboss.threads', module:'jboss-threads'
