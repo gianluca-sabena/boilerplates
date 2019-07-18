@@ -25,13 +25,14 @@ repositories {
 dependencies {
   // This dependency is found on compile classpath of this component and consumers.
   implementation 'ch.qos.logback:logback-classic:1.2.3'
-  implementation 'io.vertx:vertx-core:3.6.2'
+  compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.26'
+  implementation 'io.vertx:vertx-core:3.7.1'
   // https://vertx.io/docs/vertx-web/java/
-  implementation 'io.vertx:vertx-web:3.6.2'
+  implementation 'io.vertx:vertx-web:3.7.1'
   // Use JUnit test framework
   //testImplementation 'junit:junit:4.12'
-  testImplementation 'io.vertx:vertx-web-client:3.6.2'
-  testImplementation 'io.vertx:vertx-junit5:3.6.2'
+  testImplementation 'io.vertx:vertx-web-client:3.7.1'
+  testImplementation 'io.vertx:vertx-junit5:3.7.1'
   testImplementation 'org.assertj:assertj-core:3.8.0'
   testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.0'
   testImplementation 'org.junit.jupiter:junit-jupiter-params:5.1.0'
@@ -41,6 +42,10 @@ dependencies {
 // Define the main class for the application
 mainClassName = 'com.boilerplates.App'
 sourceCompatibility = '1.8'
+
+run {
+  args += 'first_arg'
+}
 
 // Junit5
 test {

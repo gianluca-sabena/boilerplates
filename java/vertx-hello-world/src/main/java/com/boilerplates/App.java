@@ -18,18 +18,8 @@ public class App {
     DeploymentOptions dOpt =
         new DeploymentOptions().setConfig(new JsonObject().put("message", "Ola"));
     Vertx vertx = Vertx.vertx();
-    // vertx.deployVerticle(SimpleVerticle.class.getName(),dOpt);
-    // vertx.deployVerticle(FutureVerticle.class, dOpt);
+    vertx.deployVerticle(SimpleVerticle.class.getName(), dOpt);
+    vertx.deployVerticle(FutureVerticle.class, dOpt);
     vertx.deployVerticle(WebVerticle.class, dOpt);
   }
 }
-
-// public class App {
-//     public String getGreeting() {
-//         return "Hello world.";
-//     }
-
-//     public static void main(String[] args) {
-//         System.out.println(new App().getGreeting());
-//     }
-// }

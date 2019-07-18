@@ -21,3 +21,10 @@ Example is based on
 Run `./gradlew run`
 
 Test `./gradlew test`
+
+Test different server implementation:
+
+- Simple `curl http://127.0.0.1:8080`
+- Future `curl http://127.0.0.1:8080`
+- Web Verticle `curl http://127.0.0.1:8080`
+
