@@ -22,9 +22,17 @@ Run `./gradlew run`
 
 Test `./gradlew test`
 
+UberJar `./gradlew shadowJar`
+
+Run `java -jar build/libs/vertx-hello-world-all.jar`
+
 Test different server implementation:
 
 - Simple `curl http://127.0.0.1:8080`
 - Future `curl http://127.0.0.1:8080`
 - Web Verticle `curl http://127.0.0.1:8080`
 
+## Docker
+
+- build `docker build -t vertx .`
+- run `docker run -p 8080:8080 -p 8081:8081 -p 8082:8082 vertx`
