@@ -44,7 +44,7 @@ mainClassName = 'com.boilerplates.App'
 sourceCompatibility = '1.8'
 
 run {
-  args += 'first_arg'
+  systemProperty "vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory"
 }
 
 // Junit5
