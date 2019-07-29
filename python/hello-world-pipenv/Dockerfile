@@ -42,12 +42,21 @@ RUN rpmkeys --import file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7 && \
     yum clean all 
 
 #
+# --- Install uwsgi with pip (guarantee pyenv compatiblity) ---
+#
+RUN rpmkeys --import file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7 && \
+    yum install -y  gcc gcc-c++ make  && \
+    pip install uwsgi
+
+#
 # --- Copy app source ---
 #
 COPY Pipfile ${APP_ROOT}/Pipfile
 RUN cd ${APP_ROOT} && \
     pipenv  install --skip-lock 
 COPY src ${APP_ROOT}/src
+COPY web ${APP_ROOT}/web
+COPY docker/config ${APP_ROOT}/config
 
 #
 # --- Final ---
@@ -56,4 +65,5 @@ COPY src ${APP_ROOT}/src
 USER ${USER_UID}
 WORKDIR ${APP_ROOT}
 
-CMD entrypoint pipenv run python -u src/main.py
+#CMD entrypoint pipenv run python -u src/main.py
+CMD uwsgi --socket 0.0.0.0:5000 --protocol=http --virtualenv /opt/app/.venv/ --chdir /opt/app/web  -w wsgi:app
