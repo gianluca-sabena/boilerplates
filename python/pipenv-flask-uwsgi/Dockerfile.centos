@@ -47,7 +47,6 @@ RUN rpmkeys --import file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7 && \
 RUN rpmkeys --import file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7 && \
     yum install -y  gcc gcc-c++ make  && \
     pip install uwsgi
-
 #
 # --- Copy app source ---
 #
@@ -67,3 +66,8 @@ WORKDIR ${APP_ROOT}
 
 #CMD entrypoint pipenv run python -u src/main.py
 CMD uwsgi --socket 0.0.0.0:5000 --protocol=http --virtualenv /opt/app/.venv/ --chdir /opt/app/web  -w wsgi:app
+
+# Docker:
+# - build: docker build -t centos-pyenv-flask -f Dockerfile.centos .
+# - run:   docker run -ti -p 5000:5000 --user 12345 centos-pyenv-flask
+# - test:  curl 127.0.0.1:5000

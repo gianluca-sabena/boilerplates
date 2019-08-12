@@ -15,7 +15,7 @@ Tools:
 
 ## Docker
 
-Build `docker build -t hello-world-pipenv  .`
+Build `docker build -t hello-world-pipenv -f Dockerfile.centos .`
 
 Run `docker run -t -i  hello-world-pipenv pipenv run python -u src/main.py`
 
