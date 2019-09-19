@@ -4,5 +4,5 @@ def echo():
     print("hello world!")
 
 
-def echo2():
+def echo_string():
     return "hello world!"
