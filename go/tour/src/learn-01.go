@@ -13,6 +13,6 @@ func sqrt(x float64) string {
 }
 
 func main() {
-	fmt.Print("a", 1)
+	fmt.Println("a", 1)
 	fmt.Println(sqrt(2), sqrt(-4))
 }

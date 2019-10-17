@@ -128,9 +128,9 @@ def main():
         batch_size=args.batch_size, shuffle=True, **kwargs)
     test_loader = torch.utils.data.DataLoader(
         datasets.MNIST('./data', train=False, transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+        ])),
         batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
     model = Net().to(device)
@@ -145,6 +145,7 @@ def main():
         torch.save(model.state_dict(), "mnist_cnn.pt")
 
     writer.close()
+
 
 if __name__ == '__main__':
     main()
