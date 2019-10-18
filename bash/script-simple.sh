@@ -18,26 +18,27 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # @args:	Global Arguments $@
 
 function parseCli() {
+  if [[ "$#" -eq 0 ]]; then
+      echo "  ${0}: "
+      echo ""
+      echo "               -action value               first param "
+      exit 0
+  fi
   while [[ "$#" -gt 0 ]]; do
     declare KEY="$1"
     declare VALUE="$2"
     case "${KEY}" in
     # exec command here
-    -action)
+    -a | --action)
       echo "Key: ${KEY} - Value: ${VALUE}"
       echo "Script dir is: ${SCRIPT_DIR}"
-      exit 0
       ;;
     -h | *)
-      echo "  ${0}: "
-      echo ""
-      echo "               -action value               first param "
-      exit 0
+      ${0}
       ;;
     esac
     shift
   done
-  ${0} -h
 }
 
 parseCli "$@"

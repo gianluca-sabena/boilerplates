@@ -29,22 +29,18 @@ function parseCli() {
     declare VALUE="$2"
     case "${KEY}" in
     # exec command here
-    -action)
+    -a | --action)
       main "${KEY}" "${VALUE}"
-      exit 0
       ;;
     -v | --version)
       version
-      exit 0
       ;;
     # or delegate to main function
     -h | --help)
       usage
-      exit 0
       ;;
     *)
       usage
-      exit 0
       ;;
     esac
     shift
@@ -72,6 +68,7 @@ function version() {
 }
 
 function main() {
+  echo "main"
   declare KEY="$1"
   declare VALUE="$2"
   echo "Key: ${KEY}"
@@ -83,12 +80,8 @@ function main() {
   test)
     echo "Test!"
     ;;
-  *)
-    usage
-    exit 0
-    ;;
   esac
-
+  exit 0
 }
 
 parseCli "$@"
