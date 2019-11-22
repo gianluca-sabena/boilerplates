@@ -12,3 +12,7 @@
 - Activate env `pipenv shell`
 - Run main `python src/main.py --name example`
 - Run tests `pytest`
+
+## Dev
+
+- Install dev dependencies `pipenv install --dev`
