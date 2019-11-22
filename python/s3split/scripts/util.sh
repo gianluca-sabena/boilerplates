@@ -44,7 +44,7 @@ function parseCli() {
     ;;
     test-s3split-remote-minio-1gb-files)
       echo "Run s3split with remote minio"
-      # shellcheck source=${HOME}/.s3split
+      # shellcheck disable=SC1091
       source "${HOME}/.s3split"
       python "${SCRIPT_DIR}/../src/s3split.py" --s3-secret-key "${S3_SECRET_KEY}" --s3-access-key "${S3_ACCESS_KEY}" --s3-endpoint "${S3_ENDPOINT}" --s3-use-ssl True --s3-bucket "${S3_BUCKET}" --source-path "${BENCHMARK_FILES_1GB_PATH}"
     ;;

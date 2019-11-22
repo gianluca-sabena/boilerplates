@@ -28,6 +28,7 @@ def cli():
     parser.add_argument('--s3-endpoint', help='S3 endpoint full hostname in the form http://myhost:port', required=True, default="")
     parser.add_argument('--s3-use-ssl', help='S3 endpoint ssl', required=True, default=False)
     parser.add_argument('--s3-bucket', help='S3 target bucket', required=True, default="")
+    parser.add_argument('--s3-path', help='S3 target path', required=False, default="s3split")
     parser.add_argument('--source-path', help='local filesystem path to process', required=True, default="")
     parser.add_argument('--objects', help='first level objects (file or folder) to put in a single split', required=False, default=2)
     parser.add_argument('--threads', help='Number of parallel threads ', required=False, default=10)
@@ -114,6 +115,7 @@ class ProgressPercentage(object):
 class Splitter():
     def __init__(self, event, args, stats, split):
         if not event.is_set():
+            self._args = args
             logging.debug(f"Split: {split.get('id')} - Create Splitter class")
             self._stats = stats
             session = boto3.session.Session()
@@ -168,7 +170,7 @@ class Splitter():
                                 multipart_chunksize=1024 * 1024 * 64, use_threads=True)
         key_path = os.path.basename(path)
         progress = ProgressPercentage(self._stats, path)
-        self.s3_client.upload_file(path, self.bucket, key_path,
+        self.s3_client.upload_file(path, self.bucket, self._args.s3_path+'/'+key_path,
                                    Config=config,
                                    Callback=progress
                                    )
