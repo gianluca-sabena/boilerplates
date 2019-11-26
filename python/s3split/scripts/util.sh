@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MINIO_SERVER_DATA="/tmp/minio-server/data"
 MINIO_ACCESS_KEY="test_access"
 MINIO_SECRET_KEY="test_secret"
-BENCHMARK_FILES_1GB_PATH="/tmp/big-files/1gb"
+PATH_TEST_FILES="/tmp/s3cmd-test-files"
 # @info:  Parses and validates the CLI arguments
 # @args:	Global Arguments $@
 
@@ -38,6 +38,32 @@ function parseCli() {
       export MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       minio server ${MINIO_SERVER_DATA}
       ;;
+    generate-data)
+      # Generate 5 GB + 1 GB
+      local SIZE=1024
+      local NUM_FILES=128
+      local NUM_FOLDERS=40
+      local TOTAL=$(( SIZE * NUM_FILES * NUM_FOLDERS))
+      #local PATH_BASE="${PATH_TEST_FILES}/${NUM_FOLDERS}d-${NUM_FILES}f-${SIZE}kb"
+      local PATH_BASE="${PATH_TEST_FILES}/random"
+      mkdir -p "${PATH_BASE}"
+      local counter=1
+      while [[ $counter -le $NUM_FOLDERS ]]; do
+        genfilesrandom ${PATH_BASE}/dir_${counter} ${SIZE} ${NUM_FILES}
+        ((counter += 1))
+      done
+      # To do generate 8 files * 128 Mb = 1 GB
+      local SIZE=$(( 1024 * 128 ))
+      genfilesrandom ${PATH_BASE} ${SIZE} 8
+      local TOTAL; TOTAL=$(du -sh ${PATH_BASE})
+      echo "Generated total KB: ${TOTAL}"
+
+    ;;
+    test-s3split-local-minio)
+      local PATH_PREFIX="random"
+      echo "Run s3split with local minio"
+      python "${SCRIPT_DIR}/../src/s3split.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --s3-path "${PATH_PREFIX}" --source-path "${PATH_TEST_FILES}/${PATH_PREFIX}"
+    ;;
     test-s3split-local-minio-1gb-files)
       echo "Run s3split with local minio"
       python "${SCRIPT_DIR}/../src/s3split.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --source-path "${BENCHMARK_FILES_1GB_PATH}"
@@ -56,4 +82,25 @@ function parseCli() {
   done
 }
 
+
+#
+# genfilesrandom FOLDER SIZE_KB NUM_FILES
+#
+function genfilesrandom() {
+  local DEST_PATH=${1}
+  local SIZE=$((1024 * $2))
+  local NUM_FILES=$3
+  mkdir -p "${DEST_PATH}"
+  echo "Dest folder: ${DEST_PATH}"
+  echo "Size kb: ${SIZE}"
+  echo "Number of files: ${NUM_FILES}"
+  echo "Creating master file..."
+  head -c "$SIZE" /dev/urandom >"${DEST_PATH}/file_1.txt"
+  local counter=2
+  while [[ $counter -le $NUM_FILES ]]; do
+    echo "Duplicating file: $counter "
+    cp "${DEST_PATH}/file_1.txt" "${DEST_PATH}/file_${counter}.txt"
+    ((counter += 1))
+  done
+}
 parseCli "$@"
