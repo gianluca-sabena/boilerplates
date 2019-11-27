@@ -29,7 +29,7 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
-def cli():
+def cli(args):
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='main.py',
                                      usage='%(prog)s [options]', description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
     parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")
@@ -42,7 +42,10 @@ def cli():
     parser.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
     parser.add_argument('--threads', help='Number of parallel threads ', required=False, type=int, default=5)
     parser.add_argument('--stats-interval', help='Seconds between two stats print', required=False, type=int, default=5)
-    args = parser.parse_args()
+    args = parser.parse_args(args)
+    if not os.path.isdir(args.source_path):
+        logger.error(f"--source-path arg '{args.s3_path}' is not a valid directory")
+        exit(10)
     logger.info(f"S3 target: {args.s3_endpoint}/{args.s3_bucket}/{args.s3_path}")
     logger.info(f"Filesystem source path: {args.source_path}")
     logger.info(f"Parallel threads (split/tar files): {args.threads}")
@@ -250,8 +253,8 @@ class Splitter():
             logger.info(f"Split: {self.split.get('id')} - processing interrupted because terminating event is set!")
 
 
-if __name__ == '__main__':
-    args = cli()
+def main(args):
+    args = cli(args)
     event = threading.Event()
     # logger.info(f"Cli args: {args}")
     stats = Stats(args.stats_interval)
@@ -281,3 +284,7 @@ if __name__ == '__main__':
                 logger.info(f"Split: {data.split.get('id')} - Completed task processing")
     # logger.info(f"Debug stats: {stats._stats}")
     stats.print()
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

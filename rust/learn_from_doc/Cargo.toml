@@ -1,0 +1,17 @@
+[package]
+name = "learn_from_doc"
+version = "0.1.0"
+authors = ["Gianluca Sabena <gianluca.sabena@unicredit.eu>"]
+edition = "2018"
+
+[[bin]]
+name = "hello_world"
+path = "src/bin/hello_world.rs"
+
+[[bin]]
+name = "variables"
+path = "src/bin/variables.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
