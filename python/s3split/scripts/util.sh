@@ -62,17 +62,22 @@ function parseCli() {
     test-s3split-local-minio)
       local PATH_PREFIX="random"
       echo "Run s3split with local minio"
-      python "${SCRIPT_DIR}/../src/s3split.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --s3-path "${PATH_PREFIX}" --source-path "${PATH_TEST_FILES}/${PATH_PREFIX}"
+      python "${SCRIPT_DIR}/../src/s3split/s3split.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --s3-path "${PATH_PREFIX}" --fs-path "${PATH_TEST_FILES}/${PATH_PREFIX}"
+    ;;
+    test-s3split-fail)
+      local PATH_PREFIX="random"
+      echo "Run s3split with local minio"
+      python "${SCRIPT_DIR}/../src/s3split/s3split.py" --s3-secret-key A --s3-access-key B --s3-endpoint C --s3-bucket D --s3-path E --fs-path /tmp upload
     ;;
     test-s3split-local-minio-1gb-files)
       echo "Run s3split with local minio"
-      python "${SCRIPT_DIR}/../src/s3split.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --source-path "${BENCHMARK_FILES_1GB_PATH}"
+      python "${SCRIPT_DIR}/../src/s3split/s3split.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --fs-path "${BENCHMARK_FILES_1GB_PATH}" 
     ;;
     test-s3split-remote-minio-1gb-files)
       echo "Run s3split with remote minio"
       # shellcheck disable=SC1091
       source "${HOME}/.s3split"
-      python "${SCRIPT_DIR}/../src/s3split.py" --s3-secret-key "${S3_SECRET_KEY}" --s3-access-key "${S3_ACCESS_KEY}" --s3-endpoint "${S3_ENDPOINT}" --s3-use-ssl True --s3-bucket "${S3_BUCKET}" --source-path "${BENCHMARK_FILES_1GB_PATH}"
+      python "${SCRIPT_DIR}/../src/s3split/s3split.py" --s3-secret-key "${S3_SECRET_KEY}" --s3-access-key "${S3_ACCESS_KEY}" --s3-endpoint "${S3_ENDPOINT}" --s3-use-ssl True --s3-bucket "${S3_BUCKET}" --fs-path "${BENCHMARK_FILES_1GB_PATH}"
     ;;
     -h | *)
       ${0}

@@ -24,33 +24,9 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 logger = logging.getLogger('s3cmd')
 logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s', "%H:%M:%S")
 ch.setFormatter(formatter)
 logger.addHandler(ch)
-
-
-def cli(args):
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='main.py',
-                                     usage='%(prog)s [options]', description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
-    parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")
-    parser.add_argument('--s3-access-key', help='S3 access key', required=True, default="")
-    parser.add_argument('--s3-endpoint', help='S3 endpoint full hostname in the form http://myhost:port', required=True, default="")
-    parser.add_argument('--s3-use-ssl', help='S3 endpoint ssl', required=False, default=False)
-    parser.add_argument('--s3-bucket', help='S3 target bucket', required=True, default="")
-    parser.add_argument('--s3-path', help='S3 target path', required=False, default="s3split")
-    parser.add_argument('--source-path', help='Local filesystem path to upload revursively', required=True, default="")
-    parser.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
-    parser.add_argument('--threads', help='Number of parallel threads ', required=False, type=int, default=5)
-    parser.add_argument('--stats-interval', help='Seconds between two stats print', required=False, type=int, default=5)
-    args = parser.parse_args(args)
-    if not os.path.isdir(args.source_path):
-        logger.error(f"--source-path arg '{args.s3_path}' is not a valid directory")
-        exit(10)
-    logger.info(f"S3 target: {args.s3_endpoint}/{args.s3_bucket}/{args.s3_path}")
-    logger.info(f"Filesystem source path: {args.source_path}")
-    logger.info(f"Parallel threads (split/tar files): {args.threads}")
-    logger.info(f"Working... print stats every {args.stats_interval} seconds....")
-    return args
 
 
 def get_file_list_size(path, max_size):
@@ -89,6 +65,23 @@ def get_file_list_size(path, max_size):
         splits.append({'paths': tar_paths, 'size': tar_size, 'id': id})
     logger.debug(f"Splits: {pprint.pprint(splits)}")
     return splits
+
+
+class S3Util():
+    def __init__(self, args):
+        self._args = args
+        self._session = boto3.session.Session()
+        self._client_config = botocore.config.Config(max_pool_connections=25)
+
+    def check_endpoint_connection(self):
+        try:
+            self.s3_client = self._session.client('s3', aws_access_key_id=self._args.s3_access_key, aws_secret_access_key=self._args.s3_secret_key,
+                                                  endpoint_url=self._args.s3_endpoint, use_ssl=self._args.s3_use_ssl, verify=False, config=self._client_config)
+        except (ClientError, ValueError) as e:
+            # logger.error(e)
+            return False
+        else:
+            return True
 
 
 class Stats():
@@ -227,8 +220,8 @@ class Splitter():
     def _tar(self):
         # Filter function to update tar path, required to untar in a safe location
         def filter(tobj):
-            new = tobj.name.replace(self._args.source_path.strip('/'), self._args.s3_path.strip('/'))
-            # logger.debug(f"path: {self._args.source_path} - {tobj.name} - {new}")
+            new = tobj.name.replace(self._args.fs_path.strip('/'), self._args.s3_path.strip('/'))
+            # logger.debug(f"path: {self._args.fs_path} - {tobj.name} - {new}")
             tobj.name = new
             return tobj
         if not self._event.is_set():
@@ -253,13 +246,47 @@ class Splitter():
             logger.info(f"Split: {self.split.get('id')} - processing interrupted because terminating event is set!")
 
 
+def cli(args):
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='s3split.py',
+                                     usage='%(prog)s [options]', description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
+    parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")
+    parser.add_argument('--s3-access-key', help='S3 access key', required=True, default="")
+    parser.add_argument('--s3-endpoint', help='S3 endpoint full hostname in the form http://myhost:port', required=True, default="")
+    parser.add_argument('--s3-use-ssl', help='S3 endpoint ssl', required=False, default=False)
+    parser.add_argument('--s3-bucket', help='S3 target bucket', required=True, default="")
+    parser.add_argument('--s3-path', help='S3 target path', required=False, default="s3split")
+    parser.add_argument('--fs-path', help='Local filesystem path to upload revursively', required=True, default="")
+    parser.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
+    parser.add_argument('--threads', help='Number of parallel threads ', required=False, type=int, default=5)
+    parser.add_argument('--stats-interval', help='Seconds between two stats print', required=False, type=int, default=5)
+    parser.add_argument('action', choices=['upload', 'download', 'check'])
+    args = parser.parse_args(args)
+    logger.info(f"S3 target: {args.s3_endpoint}/{args.s3_bucket}/{args.s3_path}")
+    logger.info(f"Filesystem path: {args.fs_path}")
+    logger.info(f"Parallel threads (split/tar files): {args.threads}")
+    logger.info(f"Stats interval print: {args.stats_interval} seconds")
+    # Start validation
+    if not os.path.isdir(args.fs_path):
+        logger.error(f"--fs-path argument is not a valid directory")
+        raise ValueError("args validation error fs path")
+    s3_util = S3Util(args)
+    if not s3_util.check_endpoint_connection():
+        logger.error("S3 endpoint connection error")
+        raise ValueError("args validation error S3 endpoint")
+    return args
+
+
 def main(args):
-    args = cli(args)
+    try:
+        args = cli(args)
+    except ValueError as e:
+        exit(1)
+
     event = threading.Event()
     # logger.info(f"Cli args: {args}")
     stats = Stats(args.stats_interval)
     start_time = time.time()
-    splits = get_file_list_size(args.source_path, args.tar_size)
+    splits = get_file_list_size(args.fs_path, args.tar_size)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         def signal_handler(sig, frame):
