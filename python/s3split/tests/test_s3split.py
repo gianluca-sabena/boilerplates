@@ -1,16 +1,15 @@
-# Since we use conftest.py to add src path, pylint can't detect modules
-#import s3split.main # pylint: disable=import-error
 import pytest
 import logging
 
-from main import cli
+import src.s3split.common
+from src.s3split.main import cli
+
+logger = src.s3split.common.get_logger()
 
 DOCKER_MINIO_IMAGE = "minio/minio:RELEASE.2019-10-12T01-39-57Z"
 MINIO_ACCESS_KEY = "test_access"
 MINIO_SECRET_KEY = "test_secret"
 MINIO_ENDPOINT = "http://127.0.0.1:9000"
-LOGGER = logging.getLogger(__name__)
-LOGGER.info("------")
 
 
 @pytest.fixture(scope="module")
@@ -18,15 +17,15 @@ def docker_minio_fixture():
     import docker
     client = docker.from_env()
     # Check if minio is running
-    LOGGER.info("--- docker_minio_fixture")
+    logger.info("--- docker_minio_fixture")
     try:
         minio = client.containers.get('minio')
     except docker.errors.NotFound:
-        LOGGER.info("Container minio not found... creating...")
+        logger.info("Container minio not found... creating...")
         minio = client.containers.create(DOCKER_MINIO_IMAGE, 'server /tmp', ports={'9000/tcp': 9000}, detach=True, name="minio",
                                          environment={"MINIO_ACCESS_KEY": MINIO_ACCESS_KEY, "MINIO_SECRET_KEY": MINIO_SECRET_KEY})
     if minio.status != 'running':
-        LOGGER.info("Container minio not running... starting...")
+        logger.info("Container minio not running... starting...")
         minio.start()
     return True
 

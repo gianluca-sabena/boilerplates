@@ -2,7 +2,6 @@ import sys
 import os
 import argparse
 import concurrent.futures
-import random
 import threading
 import time
 import traceback
@@ -22,43 +21,6 @@ import src.s3split.s3util
 import src.s3split.common
 
 logger = src.s3split.common.get_logger()
-
-def get_file_list_size(path, max_size):
-    def get_path_size(start_path):
-        total_size = 0
-        if os.path.isfile(start_path):
-            return os.path.getsize(start_path)
-        for dirpath, _, filenames in os.walk(start_path):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                # skip if it is symbolic link
-                if not os.path.islink(fp):
-                    total_size += os.path.getsize(fp)
-        return total_size
-    splits = []
-    tar_size = 0
-    tar_paths = []
-    list = [os.path.join(path, f) for f in os.listdir(path)]
-    random.shuffle(list)
-    id = 1
-    for p in list:
-        size = get_path_size(p)
-        # logger.debug(f"path: {p} - size: {size} - {tar_size + size} - {max_size * 1024 * 1024}")
-        if size > (max_size * 1024 * 1024):
-            logger.error(f"Single path '{p}' has a size bigger then max allowed split size. Exit")
-            exit(1)
-        if (tar_size + size) <= (max_size * 1024 * 1024):
-            tar_size += size
-            tar_paths.append(p)
-        else:
-            splits.append({'paths': tar_paths, 'size': tar_size, 'id': id})
-            id += 1
-            tar_size = size
-            tar_paths = [p]
-    if tar_size > 0:
-        splits.append({'paths': tar_paths, 'size': tar_size, 'id': id})
-    logger.debug(f"Splits: {pprint.pprint(splits)}")
-    return splits
 
 
 class Stats():
@@ -223,8 +185,8 @@ class Splitter():
 
 
 def cli(args):
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='s3split.py',
-                                     usage='%(prog)s [options]', description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='s3split',
+                                     description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
     parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")
     parser.add_argument('--s3-access-key', help='S3 access key', required=True, default="")
     parser.add_argument('--s3-endpoint', help='S3 endpoint full hostname in the form http://myhost:port', required=True, default="")
@@ -254,14 +216,12 @@ def cli(args):
 def main(args):
     try:
         args = cli(args)
+        splits = src.s3split.common.split_file_by_size(args.fs_path, args.tar_size)
     except SystemExit:
         #logger.error(f"Exit due to a validation error - {ex}")
         exit(1)
-
     event = threading.Event()
-    # logger.info(f"Cli args: {args}")
     stats = Stats(args.stats_interval)
-    splits = get_file_list_size(args.fs_path, args.tar_size)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         def signal_handler(sig, frame):
@@ -288,7 +248,8 @@ def main(args):
     stats.print()
 
 def run_cli():
-    main(sys.argv[1:])
+    """entry point for setup.py console script"""
+    main(sys.argv)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    run_cli()
