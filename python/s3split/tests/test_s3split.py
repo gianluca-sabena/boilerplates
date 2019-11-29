@@ -1,6 +1,7 @@
 import s3split
 import pytest
 import logging
+# import s3split.s3util
 # import warnings
 
 # turns all warnings into errors for this module

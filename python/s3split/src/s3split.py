@@ -18,6 +18,9 @@ import signal
 import tarfile
 import tempfile
 import pprint
+# from s3split.s3util import check
+
+# check()
 
 urllib3.disable_warnings()
 ch = logging.StreamHandler()
