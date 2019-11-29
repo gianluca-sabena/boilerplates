@@ -14,3 +14,4 @@
 - Add a dev dependency `pipenv install pytest --dev`
 - Separate src and test dir <https://docs.pytest.org/en/latest/goodpractices.html?highlight=directory%20layout#tests-outside-application-code>
 - Add an empty file `touch src/conftest.py` to instruct pytest to add src dir to sys.path <https://stackoverflow.com/a/50156706/7568979>
+- console script <https://python-packaging.readthedocs.io/en/latest/command-line-scripts.html>

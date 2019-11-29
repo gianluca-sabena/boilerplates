@@ -177,7 +177,7 @@ setup(
     #
     # For example, the following would provide a command called `sample` which
     # executes the function `main` from this package when invoked:
-    entry_points={"console_scripts": ["s3split=s3split:main"]},  # Optional
+    entry_points={"console_scripts": ["s3split=src.s3split.main:run_cli"]},  # Optional
     # List additional URLs that are relevant to your project as a dict.
     #
     # This field corresponds to the "Project-URL" metadata fields:

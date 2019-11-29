@@ -1,11 +1,9 @@
-import s3split
+# Since we use conftest.py to add src path, pylint can't detect modules
+#import s3split.main # pylint: disable=import-error
 import pytest
 import logging
-# import s3split.s3util
-# import warnings
 
-# turns all warnings into errors for this module
-# pytestmark = pytest.mark.filterwarnings("error")
+from main import cli
 
 DOCKER_MINIO_IMAGE = "minio/minio:RELEASE.2019-10-12T01-39-57Z"
 MINIO_ACCESS_KEY = "test_access"
@@ -23,7 +21,7 @@ def docker_minio_fixture():
     LOGGER.info("--- docker_minio_fixture")
     try:
         minio = client.containers.get('minio')
-    except docker.errors.NotFound as ex:
+    except docker.errors.NotFound:
         LOGGER.info("Container minio not found... creating...")
         minio = client.containers.create(DOCKER_MINIO_IMAGE, 'server /tmp', ports={'9000/tcp': 9000}, detach=True, name="minio",
                                          environment={"MINIO_ACCESS_KEY": MINIO_ACCESS_KEY, "MINIO_SECRET_KEY": MINIO_SECRET_KEY})
@@ -43,8 +41,8 @@ def test_answer(docker_minio_fixture):
 
 def test_argparse_invalid_local_path(docker_minio_fixture):
     """test that exception is raised for invalid local path"""
-    with pytest.raises(ValueError, match=r"args validation error fs path"):
-        out = s3split.cli(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "E", "upload"])
+    with pytest.raises(SystemExit, match=r"args validation error fs path"):
+        out = cli(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "E", "upload"])
         assert out
 
 
@@ -52,11 +50,11 @@ def test_minio_connection_error(docker_minio_fixture):
     """test minio connection error"""
     # captured = capsys.readouterr()
     print("XXXXXX")
-    with pytest.raises(ValueError, match=r"args validation error S3 endpoint") as excinfo:
-        s3split.cli(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])
+    with pytest.raises(SystemExit, match=r"args validation error S3 endpoint") as excinfo:
+        cli(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])
         assert "maximum recursion" in str(excinfo.value)
 
 
 def test_minio_connection_success(docker_minio_fixture):
     """test minio connecction ok"""
-    s3split.cli(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])
+    cli(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])

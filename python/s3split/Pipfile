@@ -11,6 +11,7 @@ autopep8 = "*"
 rope = "*"
 pipenv-setup = "*"
 docker = "*"
+pylint = "*"
 
 [packages]
 boto3 = "*"

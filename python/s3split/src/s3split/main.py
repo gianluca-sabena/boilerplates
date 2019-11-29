@@ -1,43 +1,34 @@
 import sys
+import os
 import argparse
 import concurrent.futures
-import logging
-import queue
 import random
 import threading
 import time
 import traceback
-import os
+
+import signal
+import tarfile
+import tempfile
+import pprint
+
 import boto3
 import boto3.session
 import botocore
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
-import urllib3
-import signal
-import tarfile
-import tempfile
-import pprint
-# from s3split.s3util import check
 
-# check()
+import src.s3split.s3util 
+import src.s3split.common
 
-urllib3.disable_warnings()
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-logger = logging.getLogger('s3cmd')
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s', "%H:%M:%S")
-ch.setFormatter(formatter)
-logger.addHandler(ch)
-
+logger = src.s3split.common.get_logger()
 
 def get_file_list_size(path, max_size):
     def get_path_size(start_path):
         total_size = 0
         if os.path.isfile(start_path):
             return os.path.getsize(start_path)
-        for dirpath, dirnames, filenames in os.walk(start_path):
+        for dirpath, _, filenames in os.walk(start_path):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 # skip if it is symbolic link
@@ -70,23 +61,6 @@ def get_file_list_size(path, max_size):
     return splits
 
 
-class S3Util():
-    def __init__(self, args):
-        self._args = args
-        self._session = boto3.session.Session()
-        self._client_config = botocore.config.Config(max_pool_connections=25)
-
-    def check_endpoint_connection(self):
-        try:
-            self.s3_client = self._session.client('s3', aws_access_key_id=self._args.s3_access_key, aws_secret_access_key=self._args.s3_secret_key,
-                                                  endpoint_url=self._args.s3_endpoint, use_ssl=self._args.s3_use_ssl, verify=False, config=self._client_config)
-        except (ClientError, ValueError) as e:
-            # logger.error(e)
-            return False
-        else:
-            return True
-
-
 class Stats():
     def __init__(self, interval):
         self._interval = interval
@@ -103,7 +77,6 @@ class Stats():
             self._stats[file] = {'size': float(os.path.getsize(file)), 'transferred': 0, 'completed': False}
 
     def print(self):
-        byte_sent = 0
         completed = 0
         total = 0
         elapsed_time = time.time() - self._time_start
@@ -244,7 +217,7 @@ class Splitter():
     def processing(self):
         logger.debug(f"Split: {self.split.get('id')} - Start processing")
         if not self._event.is_set():
-            file = self._tar()
+            self._tar()
         else:
             logger.info(f"Split: {self.split.get('id')} - processing interrupted because terminating event is set!")
 
@@ -271,24 +244,23 @@ def cli(args):
     # Start validation
     if not os.path.isdir(args.fs_path):
         logger.error(f"--fs-path argument is not a valid directory")
-        raise ValueError("args validation error fs path")
-    s3_util = S3Util(args)
-    if not s3_util.check_endpoint_connection():
-        logger.error("S3 endpoint connection error")
-        raise ValueError("args validation error S3 endpoint")
+        raise SystemExit("args validation error fs path")
+    # Test s3 connection
+    s3Manager = src.s3split.s3util.S3Manager(args)
+    s3Manager.get_client()
     return args
 
 
 def main(args):
     try:
         args = cli(args)
-    except ValueError as e:
+    except SystemExit:
+        #logger.error(f"Exit due to a validation error - {ex}")
         exit(1)
 
     event = threading.Event()
     # logger.info(f"Cli args: {args}")
     stats = Stats(args.stats_interval)
-    start_time = time.time()
     splits = get_file_list_size(args.fs_path, args.tar_size)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
@@ -303,7 +275,7 @@ def main(args):
         # Start the load operations and mark each future with its URL
         future_split = {executor.submit(Splitter, event, args, stats, split): split for split in splits}
         for future in concurrent.futures.as_completed(future_split):
-            f = future_split[future]
+            future_split[future]
             try:
                 data = future.result()
             except Exception as exc:
@@ -315,6 +287,8 @@ def main(args):
     # logger.info(f"Debug stats: {stats._stats}")
     stats.print()
 
+def run_cli():
+    main(sys.argv[1:])
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -11,6 +11,8 @@ set -o pipefail # exit on any errors in piped commands
 
 declare SCRIPT_DIR=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+declare CURRENT_PATH
+CURRENT_PATH=$(pwd)
 MINIO_SERVER_DATA="/tmp/minio-server/data"
 MINIO_ACCESS_KEY="test_access"
 MINIO_SECRET_KEY="test_secret"
@@ -27,9 +29,18 @@ function parseCli() {
   fi
   while [[ "$#" -gt 0 ]]; do
     declare KEY="$1"
-    declare VALUE="$2"
+    # declare VALUE="$2"
     case "${KEY}" in
     # exec command here
+    test-pip-install)
+      mkdir -p /tmp/test-s3split-pip-install
+      cd /tmp/test-s3split-pip-install
+      pipenv --python 3.7
+      ls "${SCRIPT_DIR}/../"
+      pipenv run pip install -e "${SCRIPT_DIR}/../"
+      pipenv run s3split -h
+      cd "${CURRENT_PATH}"
+    ;;
     minio-server)
       # echo "Key: ${KEY} - Value: ${VALUE}"
       # echo "Script dir is: ${SCRIPT_DIR}"
@@ -61,23 +72,23 @@ function parseCli() {
     ;;
     test-s3split-local-minio)
       local PATH_PREFIX="random"
-      echo "Run s3split with local minio"
-      python "${SCRIPT_DIR}/../src/s3split/s3split.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --s3-path "${PATH_PREFIX}" --fs-path "${PATH_TEST_FILES}/${PATH_PREFIX}"
+      #echo "Run s3split with local minio"
+      python "${SCRIPT_DIR}/../src/s3split/main.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --s3-path "${PATH_PREFIX}" --fs-path "${PATH_TEST_FILES}/${PATH_PREFIX}"
     ;;
     test-s3split-fail)
       local PATH_PREFIX="random"
-      echo "Run s3split with local minio"
-      python "${SCRIPT_DIR}/../src/s3split/s3split.py" --s3-secret-key A --s3-access-key B --s3-endpoint C --s3-bucket D --s3-path E --fs-path /tmp upload
+      #echo "Run s3split with local minio"
+      python "${SCRIPT_DIR}/../src/s3split/main.py" --s3-secret-key A --s3-access-key B --s3-endpoint C --s3-bucket D --s3-path E --fs-path /tmp upload
     ;;
     test-s3split-local-minio-1gb-files)
       echo "Run s3split with local minio"
-      python "${SCRIPT_DIR}/../src/s3split/s3split.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --fs-path "${BENCHMARK_FILES_1GB_PATH}" 
+      python "${SCRIPT_DIR}/../src/s3split/main.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --fs-path "${BENCHMARK_FILES_1GB_PATH}" 
     ;;
     test-s3split-remote-minio-1gb-files)
       echo "Run s3split with remote minio"
-      # shellcheck disable=SC1091
+      # shellcheck disable=SC1091,SC1090
       source "${HOME}/.s3split"
-      python "${SCRIPT_DIR}/../src/s3split/s3split.py" --s3-secret-key "${S3_SECRET_KEY}" --s3-access-key "${S3_ACCESS_KEY}" --s3-endpoint "${S3_ENDPOINT}" --s3-use-ssl True --s3-bucket "${S3_BUCKET}" --fs-path "${BENCHMARK_FILES_1GB_PATH}"
+      python "${SCRIPT_DIR}/../src/s3split/main.py" --s3-secret-key "${S3_SECRET_KEY}" --s3-access-key "${S3_ACCESS_KEY}" --s3-endpoint "${S3_ENDPOINT}" --s3-use-ssl True --s3-bucket "${S3_BUCKET}" --fs-path "${BENCHMARK_FILES_1GB_PATH}"
     ;;
     -h | *)
       ${0}
