@@ -13,9 +13,6 @@ urllib3.disable_warnings()
 
 
 class S3Manager():
-    def check(self):
-        print("---- example module ---")
-
     def __init__(self, args):
         self._args = args
         self._session = boto3.session.Session()

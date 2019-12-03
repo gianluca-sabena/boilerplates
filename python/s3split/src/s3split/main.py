@@ -68,29 +68,6 @@ class Stats():
                 self.print()
 
 
-
-
-def cli(args):
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='s3split',
-                                     description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
-    parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")
-    parser.add_argument('--s3-access-key', help='S3 access key', required=True, default="")
-    parser.add_argument('--s3-endpoint', help='S3 endpoint full hostname in the form http://myhost:port', required=True, default="")
-    parser.add_argument('--s3-use-ssl', help='S3 endpoint ssl', required=False, default=False)
-    parser.add_argument('--s3-bucket', help='S3 target bucket', required=True, default="")
-    parser.add_argument('--s3-path', help='S3 target path', required=False, default="s3split")
-    parser.add_argument('--fs-path', help='Local filesystem path to upload revursively', required=True, default="")
-    parser.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
-    parser.add_argument('--threads', help='Number of parallel threads ', required=False, type=int, default=5)
-    parser.add_argument('--stats-interval', help='Seconds between two stats print', required=False, type=int, default=5)
-    parser.add_argument('action', choices=['upload', 'download', 'check'])
-    args = parser.parse_args(args)
-    logger.info(f"S3 target: {args.s3_endpoint}/{args.s3_bucket}/{args.s3_path}")
-    logger.info(f"Filesystem path: {args.fs_path}")
-    logger.info(f"Parallel threads (split/tar files): {args.threads}")
-    logger.info(f"Stats interval print: {args.stats_interval} seconds")
-    return args
-
 def action_upload(args):
     splits = common.split_file_by_size(args.fs_path, args.tar_size)
     # Test s3 connection
@@ -112,7 +89,7 @@ def action_upload(args):
         signal.signal(signal.SIGTERM, signal_handler)
         # Start the load operations and mark each future with its URL
         future_split = {executor.submit(splitter.Splitter, event, args, stats, split): split for split in splits}
-        #for split in splitter:
+        # for split in splitter:
 
         for future in concurrent.futures.as_completed(future_split):
             future_split[future]
@@ -127,6 +104,7 @@ def action_upload(args):
     # logger.info(f"Debug stats: {stats._stats}")
     stats.print()
 
+
 def run_cli():
     """entry point for setup.py console script"""
     main(sys.argv[1:])
@@ -134,15 +112,33 @@ def run_cli():
 #
 # --- main --- --- --- ---
 #
+
+
 def main(sys_args):
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='s3split',
+                                     description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
+    parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")
+    parser.add_argument('--s3-access-key', help='S3 access key', required=True, default="")
+    parser.add_argument('--s3-endpoint', help='S3 endpoint full hostname in the form http://myhost:port', required=True, default="")
+    parser.add_argument('--s3-use-ssl', help='S3 endpoint ssl', required=False, default=False)
+    parser.add_argument('--s3-bucket', help='S3 target bucket', required=True, default="")
+    parser.add_argument('--s3-path', help='S3 target path', required=False, default="s3split")
+    parser.add_argument('--fs-path', help='Local filesystem path to upload revursively', required=True, default="")
+    parser.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
+    parser.add_argument('--threads', help='Number of parallel threads ', required=False, type=int, default=5)
+    parser.add_argument('--stats-interval', help='Seconds between two stats print', required=False, type=int, default=5)
+    parser.add_argument('action', choices=['upload', 'download', 'check'])
+    args = parser.parse_args(sys_args)
+    logger.info(f"S3 target: {args.s3_endpoint}/{args.s3_bucket}/{args.s3_path}")
+    logger.info(f"Filesystem path: {args.fs_path}")
+    logger.info(f"Parallel threads (split/tar files): {args.threads}")
+    logger.info(f"Stats interval print: {args.stats_interval} seconds")
     try:
-        args = cli(sys_args)
         if args.action == "upload":
             action_upload(args)
     except ValueError as ex:
         logger.error(f"ValueError: {ex}")
         raise ValueError(ex)
-        #exit(1)
 
 
 if __name__ == '__main__':

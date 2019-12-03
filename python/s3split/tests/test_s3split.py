@@ -56,13 +56,6 @@ def test_minio_invalid_endpoint(docker_minio_fixture):
     with pytest.raises(ValueError, match=r"S3 ValueError: Invalid endpoint: C"):
         assert main.main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])
 
-
-def test_minio_connection_success(docker_minio_fixture):
-    """test minio connecction ok"""
-    args = main.cli(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])
-    logger.info(pprint.pprint(args))
-
-
 def test_minio_invalid_bucket(docker_minio_fixture):
     n_files= 10
     size = 1024
