@@ -1,10 +1,10 @@
 import pytest
 import logging
 
-import src.s3split.common
-from src.s3split.main import cli
+import common
+from main import cli
 
-logger = src.s3split.common.get_logger()
+logger = common.get_logger()
 
 DOCKER_MINIO_IMAGE = "minio/minio:RELEASE.2019-10-12T01-39-57Z"
 MINIO_ACCESS_KEY = "test_access"

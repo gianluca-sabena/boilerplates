@@ -17,10 +17,10 @@ import botocore
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 
-import src.s3split.s3util 
-import src.s3split.common
+import s3util
+import common
 
-logger = src.s3split.common.get_logger()
+logger = common.get_logger()
 
 
 class Stats():
@@ -208,7 +208,7 @@ def cli(args):
         logger.error(f"--fs-path argument is not a valid directory")
         raise SystemExit("args validation error fs path")
     # Test s3 connection
-    s3Manager = src.s3split.s3util.S3Manager(args)
+    s3Manager = s3util.S3Manager(args)
     s3Manager.get_client()
     return args
 
@@ -216,7 +216,7 @@ def cli(args):
 def main(args):
     try:
         args = cli(args)
-        splits = src.s3split.common.split_file_by_size(args.fs_path, args.tar_size)
+        splits = common.split_file_by_size(args.fs_path, args.tar_size)
     except SystemExit:
         #logger.error(f"Exit due to a validation error - {ex}")
         exit(1)
@@ -249,7 +249,7 @@ def main(args):
 
 def run_cli():
     """entry point for setup.py console script"""
-    main(sys.argv)
+    main(sys.argv[1:])
 
 if __name__ == '__main__':
     run_cli()

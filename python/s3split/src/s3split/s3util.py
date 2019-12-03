@@ -6,9 +6,9 @@ from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 import urllib3
 
-import src.s3split.common
+import common
 
-logger = src.s3split.common.get_logger()
+logger = common.get_logger()
 urllib3.disable_warnings()
 
 class S3Manager():
