@@ -57,7 +57,7 @@ class S3Manager():
         except ValueError as e:
             raise ValueError(f"S3 ValueError: {e}")            
         except ClientError as e:
-            # If a client error is thrown, then check that it was a 404 error.
+
             # If it was a 404 error, then the bucket does not exist.
             if e.response['Error']['Code'] == '404':
                 return False
