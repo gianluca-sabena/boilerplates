@@ -16,6 +16,10 @@ def get_logger():
     return logging
 
 def split_file_by_size(path, max_size):
+    # Start validation
+    if not os.path.isdir(path):
+#        logger.error(f"--fs-path argument is not a valid directory")
+        raise ValueError("--fs-path argument is not a valid directory")
     def get_path_size(start_path):
         total_size = 0
         if os.path.isfile(start_path):

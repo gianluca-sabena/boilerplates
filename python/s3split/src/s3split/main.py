@@ -19,6 +19,7 @@ from boto3.s3.transfer import TransferConfig
 
 import s3util
 import common
+import splitter
 
 logger = common.get_logger()
 
@@ -67,121 +68,6 @@ class Stats():
                 self.print()
 
 
-class ProgressPercentage(object):
-    files = dict()
-
-    def __init__(self, stats, filename):
-        self._filename = filename
-        self._stats = stats
-        self._size = float(os.path.getsize(filename))
-        self._seen_so_far = 0
-        stats._add(filename)
-        self._lock = threading.Lock()
-
-    def __call__(self, bytes_amount):
-        # To simplify, assume this is hooked up to a single filename
-        with self._lock:
-            self._seen_so_far += bytes_amount
-            self._stats._update(self._filename, bytes_amount)
-
-
-class Splitter():
-    def __init__(self, event, args, stats, split):
-        if not event.is_set():
-            logger.debug(f"Split: {split.get('id')} - Create Splitter class")
-            self._event = event
-            self._args = args
-            self._stats = stats
-            self.split = split
-            self.bucket = args.s3_bucket
-            self.name_tar = f"s3cmd-split-{self.split.get('id')}.tar"
-            session = boto3.session.Session()
-            try:
-                self.client_config = botocore.config.Config(max_pool_connections=25)
-                self.s3_client = session.client('s3', aws_access_key_id=args.s3_access_key, aws_secret_access_key=args.s3_secret_key,
-                                                endpoint_url=args.s3_endpoint, use_ssl=args.s3_use_ssl, verify=False, config=self.client_config)
-            except ClientError as e:
-                logger.error(e)
-            if self.mk_bucket() is True:
-                self.processing()
-            else:
-                logger.error("Can not create bucket: "+self.bucket)
-        else:
-            logger.debug(f"Split: {split.get('id')} - Create Splitter class skipped because terminating event is set")
-
-    # def _stats(self, bytes_amount):
-    #     self._stat_byte_sent += bytes_amount
-
-    def mk_bucket(self):
-        """Create an S3 bucket in a specified region
-
-        :param bucket_name: Bucket to create
-        :param region: String region to create bucket in, e.g., 'us-west-2'
-        :return: True if bucket created, else False
-        """
-
-        # Check if a bucket exsists https://boto3.amazonaws.com/v1/documentation/api/latest/guide/migrations3.html?highlight=clienterror#accessing-a-bucket
-        try:
-            self.s3_client.head_bucket(Bucket=self.bucket)
-        except ClientError as e:
-            # If a client error is thrown, then check that it was a 404 error.
-            # If it was a 404 error, then the bucket does not exist.
-            if e.response['Error']['Code'] == '404':
-                # Create bucket
-                try:
-                    self.s3_client.create_bucket(Bucket=self.bucket)
-                except ClientError as e:
-                    logger.error(e, e.response)
-                    return False
-                return True
-            # elif e.response['Error']['Code'] == '404':
-            #     logger.error("User has no access to bucket")
-            #     # exit(404)
-            else:
-                logger.error(e, e.response)
-                return False
-        return True
-
-    def _multi_part_upload(self, path):
-        if not self._event.is_set():
-            logger.debug(f"Split: {self.split.get('id')} - Start upload path: {path}")
-            config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
-                                    multipart_chunksize=1024 * 1024 * 64, use_threads=True)
-            progress = ProgressPercentage(self._stats, path)
-            self.s3_client.upload_file(path, self.bucket, self._args.s3_path+'/'+os.path.basename(path),
-                                       Config=config,
-                                       Callback=progress
-                                       )
-        else:
-            logger.info(f"Split: {self.split.get('id')} - Upload interrupted because terminating event is set!")
-
-    def _tar(self):
-        # Filter function to update tar path, required to untar in a safe location
-        def filter(tobj):
-            new = tobj.name.replace(self._args.fs_path.strip('/'), self._args.s3_path.strip('/'))
-            # logger.debug(f"path: {self._args.fs_path} - {tobj.name} - {new}")
-            tobj.name = new
-            return tobj
-        if not self._event.is_set():
-            logger.debug(f"Split: {self.split.get('id')} - Start create tar {self.name_tar}")
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tar_file = os.path.join(tmpdir, self.name_tar)
-                with tarfile.open(tar_file, "w") as tar:
-                    for path in self.split.get('paths'):
-                        # remove base path from folder with filter function
-                        tar.add(path, filter=filter)
-                logger.debug(f"Split: {self.split.get('id')} - Generated tar file {tar_file}")
-                # Start upload
-                self._multi_part_upload(tar_file)
-        else:
-            logger.info(f"Split: {self.split.get('id')} - Tar interrupted because terminating event is set!")
-
-    def processing(self):
-        logger.debug(f"Split: {self.split.get('id')} - Start processing")
-        if not self._event.is_set():
-            self._tar()
-        else:
-            logger.info(f"Split: {self.split.get('id')} - processing interrupted because terminating event is set!")
 
 
 def cli(args):
@@ -203,26 +89,18 @@ def cli(args):
     logger.info(f"Filesystem path: {args.fs_path}")
     logger.info(f"Parallel threads (split/tar files): {args.threads}")
     logger.info(f"Stats interval print: {args.stats_interval} seconds")
-    # Start validation
-    if not os.path.isdir(args.fs_path):
-        logger.error(f"--fs-path argument is not a valid directory")
-        raise SystemExit("args validation error fs path")
+    return args
+
+def action_upload(args):
+    splits = common.split_file_by_size(args.fs_path, args.tar_size)
     # Test s3 connection
     s3Manager = s3util.S3Manager(args)
     s3Manager.get_client()
-    return args
-
-
-def main(args):
-    try:
-        args = cli(args)
-        splits = common.split_file_by_size(args.fs_path, args.tar_size)
-    except SystemExit:
-        #logger.error(f"Exit due to a validation error - {ex}")
-        exit(1)
+    # Test write access to bucket
+    # s3Manager.bucket_exsist(args.s3_bucket)
+    s3Manager.bucket_create(args.s3_bucket)
     event = threading.Event()
     stats = Stats(args.stats_interval)
-
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         def signal_handler(sig, frame):
             logger.info('You pressed Ctrl+C!... \n\nThe program will terminate AFTER ongoing file upload(s) complete\n\n')
@@ -233,7 +111,9 @@ def main(args):
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         # Start the load operations and mark each future with its URL
-        future_split = {executor.submit(Splitter, event, args, stats, split): split for split in splits}
+        future_split = {executor.submit(splitter.Splitter, event, args, stats, split): split for split in splits}
+        #for split in splitter:
+
         for future in concurrent.futures.as_completed(future_split):
             future_split[future]
             try:
@@ -250,6 +130,20 @@ def main(args):
 def run_cli():
     """entry point for setup.py console script"""
     main(sys.argv[1:])
+
+#
+# --- main --- --- --- ---
+#
+def main(sys_args):
+    try:
+        args = cli(sys_args)
+        if args.action == "upload":
+            action_upload(args)
+    except ValueError as ex:
+        logger.error(f"ValueError: {ex}")
+        raise ValueError(ex)
+        #exit(1)
+
 
 if __name__ == '__main__':
     run_cli()
