@@ -17,11 +17,11 @@ import botocore
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 
-import s3util
-import common
-import splitter
+import s3split.s3util
+import s3split.common
+import s3split.splitter
 
-logger = common.get_logger()
+logger = s3split.common.get_logger()
 
 
 class Stats():
@@ -69,10 +69,10 @@ class Stats():
 
 
 def action_upload(args):
-    splits = common.split_file_by_size(args.fs_path, args.tar_size)
+    splits = s3split.common.split_file_by_size(args.fs_path, args.tar_size)
     # Test s3 connection
     stats = Stats(args.stats_interval)
-    s3Manager = s3util.S3Manager(args, stats)
+    s3Manager = s3split.s3util.S3Manager(args, stats)
     s3Manager.get_client()
     # Test write access to bucket
     # s3Manager.bucket_exsist(args.s3_bucket)
@@ -91,8 +91,8 @@ def action_upload(args):
         # future_split = {executor.submit(splitter.Splitter, event, args, stats, split): split for split in splits}
         future_split = {}
         for split in splits:
-            s3manager = s3util.S3Manager(args, stats)
-            future = executor.submit(splitter.Splitter, event, s3manager, split)
+            s3manager = s3split.s3util.S3Manager(args, stats)
+            future = executor.submit(s3split.splitter.Splitter, event, s3manager, split)
             future_split.update({future:split})
         logger.debug(f"List of futures: {future_split}")
         for future in concurrent.futures.as_completed(future_split):
@@ -111,14 +111,14 @@ def action_upload(args):
 
 def run_cli():
     """entry point for setup.py console script"""
-    main(sys.argv[1:])
+    run_main(sys.argv[1:])
 
 #
 # --- main --- --- --- ---
 #
 
 
-def main(sys_args):
+def run_main(sys_args):
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, prog='s3split',
                                      description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
     parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")

@@ -8,9 +8,9 @@ from boto3.s3.transfer import TransferConfig
 import urllib3
 import threading
 
-import common
+import s3split.common
 
-logger = common.get_logger()
+logger = s3split.common.get_logger()
 urllib3.disable_warnings()
 
 class ProgressPercentage(object):

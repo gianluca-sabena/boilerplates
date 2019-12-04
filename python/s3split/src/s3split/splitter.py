@@ -17,10 +17,9 @@ import botocore
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 
-import s3util
-import common
+import s3split.common
 
-logger = common.get_logger()
+logger = s3split.common.get_logger()
 
 
 

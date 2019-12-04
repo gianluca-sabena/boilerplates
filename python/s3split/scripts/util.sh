@@ -33,6 +33,9 @@ function parseCli() {
     case "${KEY}" in
     # exec command here
     test-pip-install)
+      export PIPENV_VENV_IN_PROJECT="enabled"
+      # export DISTUTILS_DEBUG="enabled"
+      rm -rf /tmp/test-s3split-pip-install
       mkdir -p /tmp/test-s3split-pip-install
       cd /tmp/test-s3split-pip-install
       pipenv --python 3.7

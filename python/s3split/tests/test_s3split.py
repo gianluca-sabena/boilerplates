@@ -2,11 +2,11 @@ import pytest
 import logging
 import os
 import pprint
+ # pylint: disable=import-error
+import s3split.common 
+import s3split.app  
 
-import common  # pylint: disable=import-error
-import main  # pylint: disable=import-error
-
-logger = common.get_logger()
+logger = s3split.common.get_logger()
 
 DOCKER_MINIO_IMAGE = "minio/minio:RELEASE.2019-10-12T01-39-57Z"
 MINIO_ACCESS_KEY = "test_access"
@@ -49,13 +49,13 @@ def generate_random_files(full_path, n_files, size):
 def test_argparse_invalid_local_path(docker_minio_fixture):
     """test that exception is raised for invalid local path"""
     with pytest.raises(ValueError, match=r"--fs-path argument is not a valid directory"):
-        assert main.main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "E", "upload"])
+        assert s3split.app.run_main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "E", "upload"])
 
 
 def test_minio_invalid_endpoint(docker_minio_fixture):
     """test minio connection error"""
     with pytest.raises(ValueError, match=r"S3 ValueError: Invalid endpoint: C"):
-        assert main.main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])
+        assert s3split.app.run_main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])
 
 
 def test_minio_invalid_bucket(docker_minio_fixture):
@@ -64,7 +64,7 @@ def test_minio_invalid_bucket(docker_minio_fixture):
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     generate_random_files(full_path, n_files, size)
     with pytest.raises(ValueError, match=r'S3 ClientError: An error occurred \(InvalidBucketName\).*'):
-        assert main.main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--s3-bucket", "D", "--fs-path", full_path, "upload"])
+        assert s3split.app.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--s3-bucket", "D", "--fs-path", full_path, "upload"])
 
 
 def test_minio_upload(docker_minio_fixture):
@@ -72,4 +72,4 @@ def test_minio_upload(docker_minio_fixture):
     size = 1024
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     generate_random_files(full_path, n_files, size)
-    main.main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--fs-path", full_path, "--s3-bucket", "test", "--tar-size", "10", "upload"])
+    s3split.app.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--fs-path", full_path, "--s3-bucket", "test", "--tar-size", "10", "upload"])
