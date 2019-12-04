@@ -3,8 +3,8 @@ import logging
 import os
 import pprint
 
-import common # pylint: disable=import-error
-import main # pylint: disable=import-error
+import common  # pylint: disable=import-error
+import main  # pylint: disable=import-error
 
 logger = common.get_logger()
 
@@ -31,6 +31,7 @@ def docker_minio_fixture():
         minio.start()
     return True
 
+
 def generate_random_files(full_path, n_files, size):
     """path, n_files, number of files file size in kb"""
     if not os.path.isdir(full_path):
@@ -42,7 +43,7 @@ def generate_random_files(full_path, n_files, size):
             logger.info(f"Successfully created the directory {full_path}")
     for i in range(n_files):
         with open(os.path.join(full_path, f"file_{i+1}.txt"), 'wb') as fout:
-            fout.write(os.urandom(1024))
+            fout.write(os.urandom(size * 1024))
 
 
 def test_argparse_invalid_local_path(docker_minio_fixture):
@@ -56,17 +57,19 @@ def test_minio_invalid_endpoint(docker_minio_fixture):
     with pytest.raises(ValueError, match=r"S3 ValueError: Invalid endpoint: C"):
         assert main.main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "--s3-bucket", "D", "--fs-path", "/tmp", "upload"])
 
+
 def test_minio_invalid_bucket(docker_minio_fixture):
-    n_files= 10
+    n_files = 100
     size = 1024
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     generate_random_files(full_path, n_files, size)
     with pytest.raises(ValueError, match=r'S3 ClientError: An error occurred \(InvalidBucketName\).*'):
         assert main.main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--s3-bucket", "D", "--fs-path", full_path, "upload"])
 
+
 def test_minio_upload(docker_minio_fixture):
-    n_files= 10
+    n_files = 100
     size = 1024
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     generate_random_files(full_path, n_files, size)
-    main.main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--s3-bucket", "test", "--fs-path", full_path, "upload"])
+    main.main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--fs-path", full_path, "--s3-bucket", "test", "--tar-size", "10", "upload"])

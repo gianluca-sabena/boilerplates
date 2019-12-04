@@ -4,7 +4,7 @@ import os
 
 
 def get_logger():
-    logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s', datefmt='%H:%M:%S')
+    logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG)
     # logger = logging.getLogger('s3cmd')
     # ch = logging.StreamHandler()
     # ch.setLevel(logging.DEBUG)

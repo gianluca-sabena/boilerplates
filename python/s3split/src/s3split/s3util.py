@@ -1,23 +1,46 @@
 
+import os
 import boto3
 import boto3.session
 import botocore
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 import urllib3
+import threading
 
 import common
 
 logger = common.get_logger()
 urllib3.disable_warnings()
 
+class ProgressPercentage(object):
+    files = dict()
+
+    def __init__(self, stats, filename):
+        self._filename = filename
+        self._stats = stats
+        self._size = float(os.path.getsize(filename))
+        self._seen_so_far = 0
+        stats._add(filename)
+        self._lock = threading.Lock()
+
+    def __call__(self, bytes_amount):
+        # To simplify, assume this is hooked up to a single filename
+        with self._lock:
+            self._seen_so_far += bytes_amount
+            self._stats._update(self._filename, bytes_amount)
 
 class S3Manager():
-    def __init__(self, args):
+    def __init__(self, args, stats):
+        self._stats = stats
         self._args = args
         self._session = boto3.session.Session()
         self._client_config = botocore.config.Config(max_pool_connections=25)
         self._s3_client = None
+        self._s3_client = self.get_client()
+        self.s3_bucket = args.s3_bucket
+        self.s3_path = args.s3_path
+        self.fs_path = args.fs_path
 
     def get_client(self):
         if self._s3_client is None:
@@ -66,3 +89,12 @@ class S3Manager():
                 raise ValueError(f"S3 ClientError: {e}")
         else:
             return True
+
+    def upload_file(self, fs_path, bucket, s3_path):
+            config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
+                                    multipart_chunksize=1024 * 1024 * 64, use_threads=True)
+            progress = ProgressPercentage(self._stats, fs_path)
+            self._s3_client.upload_file(fs_path, bucket, s3_path,
+                                       Config=config,
+                                       Callback=progress
+                                       )

@@ -71,13 +71,13 @@ class Stats():
 def action_upload(args):
     splits = common.split_file_by_size(args.fs_path, args.tar_size)
     # Test s3 connection
-    s3Manager = s3util.S3Manager(args)
+    stats = Stats(args.stats_interval)
+    s3Manager = s3util.S3Manager(args, stats)
     s3Manager.get_client()
     # Test write access to bucket
     # s3Manager.bucket_exsist(args.s3_bucket)
     s3Manager.bucket_create(args.s3_bucket)
     event = threading.Event()
-    stats = Stats(args.stats_interval)
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         def signal_handler(sig, frame):
             logger.info('You pressed Ctrl+C!... \n\nThe program will terminate AFTER ongoing file upload(s) complete\n\n')
@@ -88,9 +88,13 @@ def action_upload(args):
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         # Start the load operations and mark each future with its URL
-        future_split = {executor.submit(splitter.Splitter, event, args, stats, split): split for split in splits}
-        # for split in splitter:
-
+        # future_split = {executor.submit(splitter.Splitter, event, args, stats, split): split for split in splits}
+        future_split = {}
+        for split in splits:
+            s3manager = s3util.S3Manager(args, stats)
+            future = executor.submit(splitter.Splitter, event, s3manager, split)
+            future_split.update({future:split})
+        logger.debug(f"List of futures: {future_split}")
         for future in concurrent.futures.as_completed(future_split):
             future_split[future]
             try:
@@ -132,6 +136,7 @@ def main(sys_args):
     logger.info(f"S3 target: {args.s3_endpoint}/{args.s3_bucket}/{args.s3_path}")
     logger.info(f"Filesystem path: {args.fs_path}")
     logger.info(f"Parallel threads (split/tar files): {args.threads}")
+    logger.info(f"Tar object max size: {args.tar_size} MB")
     logger.info(f"Stats interval print: {args.stats_interval} seconds")
     try:
         if args.action == "upload":

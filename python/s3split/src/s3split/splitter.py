@@ -21,71 +21,31 @@ import s3util
 import common
 
 logger = common.get_logger()
-class ProgressPercentage(object):
-    files = dict()
 
-    def __init__(self, stats, filename):
-        self._filename = filename
-        self._stats = stats
-        self._size = float(os.path.getsize(filename))
-        self._seen_so_far = 0
-        stats._add(filename)
-        self._lock = threading.Lock()
-
-    def __call__(self, bytes_amount):
-        # To simplify, assume this is hooked up to a single filename
-        with self._lock:
-            self._seen_so_far += bytes_amount
-            self._stats._update(self._filename, bytes_amount)
 
 
 class Splitter():
-    def __init__(self, event, args, stats, split):
+    def __init__(self, event, s3manager, split):
         if not event.is_set():
-            logger.debug(f"Split: {split.get('id')} - Create Splitter class")
+            logger.debug(f"Split: {split.get('id')} - Create Splitter class for split: {split}")
+            self._s3manager = s3manager
             self._event = event
-            self._args = args
-            self._stats = stats
+            # self._args = args
+            self._fs_path = s3manager.fs_path
+            self._s3_bucket = s3manager.s3_bucket
+            self._s3_path = s3manager.s3_path
             self.split = split
-            self.bucket = args.s3_bucket
+            # self.bucket = args.s3_bucket
             self.name_tar = f"s3cmd-split-{self.split.get('id')}.tar"
-            session = boto3.session.Session()
-            try:
-                self.client_config = botocore.config.Config(max_pool_connections=25)
-                self.s3_client = session.client('s3', aws_access_key_id=args.s3_access_key, aws_secret_access_key=args.s3_secret_key,
-                                                endpoint_url=args.s3_endpoint, use_ssl=args.s3_use_ssl, verify=False, config=self.client_config)
-            except ClientError as e:
-                logger.error(e)
             self.processing()
-            # if self.mk_bucket() is True:
-            #     self.processing()
-            # else:
-            #     logger.error("Can not create bucket: "+self.bucket)
         else:
             logger.debug(f"Split: {split.get('id')} - Create Splitter class skipped because terminating event is set")
 
-    # def _stats(self, bytes_amount):
-    #     self._stat_byte_sent += bytes_amount
-
-    
-    def _multi_part_upload(self, path):
-        if not self._event.is_set():
-            logger.debug(f"Split: {self.split.get('id')} - Start upload path: {path}")
-            config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
-                                    multipart_chunksize=1024 * 1024 * 64, use_threads=True)
-            progress = ProgressPercentage(self._stats, path)
-            self.s3_client.upload_file(path, self.bucket, self._args.s3_path+'/'+os.path.basename(path),
-                                       Config=config,
-                                       Callback=progress
-                                       )
-        else:
-            logger.info(f"Split: {self.split.get('id')} - Upload interrupted because terminating event is set!")
 
     def _tar(self):
         # Filter function to update tar path, required to untar in a safe location
         def filter(tobj):
-            new = tobj.name.replace(self._args.fs_path.strip('/'), self._args.s3_path.strip('/'))
-            # logger.debug(f"path: {self._args.fs_path} - {tobj.name} - {new}")
+            new = tobj.name.replace(self._fs_path.strip('/'), self._s3_path.strip('/'))
             tobj.name = new
             return tobj
         if not self._event.is_set():
@@ -96,9 +56,12 @@ class Splitter():
                     for path in self.split.get('paths'):
                         # remove base path from folder with filter function
                         tar.add(path, filter=filter)
-                logger.debug(f"Split: {self.split.get('id')} - Generated tar file {tar_file}")
-                # Start upload
-                self._multi_part_upload(tar_file)
+                    logger.debug(f"Split: {self.split.get('id')} - Generated tar file {tar_file}")
+                    # Start upload
+                    if not self._event.is_set():
+                        self._s3manager.upload_file(tar_file, self._s3_bucket, self._s3_path+'/'+os.path.basename(tar_file))
+                    else:
+                        logger.info(f"Split: {self.split.get('id')} - Upload interrupted because terminating event is set!")
         else:
             logger.info(f"Split: {self.split.get('id')} - Tar interrupted because terminating event is set!")
 
