@@ -11,9 +11,8 @@ from os import path
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
-
 setup(
-    name="s3split",  # Required
+    name="helloworld",  # Required
     # Versions should comply with PEP 440:
     # https://www.python.org/dev/peps/pep-0440/
     #
@@ -24,7 +23,7 @@ setup(
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
     # https://packaging.python.org/specifications/core-metadata/#summary
-    description="s3split splits a list of files and directories in different tar files and uploads them to S3 compatible endpoint",  # Optional
+    description="hello world",  # Optional
 
     # When your source code is in a subdirectory under the project root, e.g.
     # `src/`, it is necessary to specify the `package_dir` argument.
@@ -33,8 +32,8 @@ setup(
     # You can just specify package directories manually here if your project is
     # simple. Or you can use find_packages().
     #
-    # packages=find_packages(where='src'),  # Required
-    packages=find_namespace_packages(where='src'),
+    #packages=find_packages(where='src'),  # Required
+    packages=find_namespace_packages(where='src'),  # Required
     # Specify which Python versions you support. In contrast to the
     # 'Programming Language' classifiers above, 'pip install' will check this
     # and refuse to install the project if the version does not match. If you
@@ -49,14 +48,6 @@ setup(
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        "boto3==1.10.25",
-        "botocore==1.13.25",
-        "docutils==0.15.2",
-        "jmespath==0.9.4",
-        "python-dateutil==2.8.0; python_version >= '2.7'",
-        "s3transfer==0.2.1",
-        "six==1.13.0",
-        "urllib3==1.25.7; python_version >= '3.4'",
     ],  # Optional
 
 
@@ -67,5 +58,5 @@ setup(
     #
     # For example, the following would provide a command called `sample` which
     # executes the function `main` from this package when invoked:
-    entry_points={"console_scripts": ["s3split=s3split.app:run_cli"]}
+    entry_points={"console_scripts": ["helloworld=helloworld.main:run_cli"]}
 )

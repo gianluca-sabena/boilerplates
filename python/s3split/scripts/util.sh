@@ -40,7 +40,7 @@ function parseCli() {
       cd /tmp/test-s3split-pip-install
       pipenv --python 3.7
       ls "${SCRIPT_DIR}/../"
-      pipenv run pip install -e "${SCRIPT_DIR}/../"
+      pipenv run pip install "${SCRIPT_DIR}/../"
       pipenv run s3split -h
       cd "${CURRENT_PATH}"
     ;;

@@ -17,6 +17,7 @@ import botocore
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 
+# This is the main file, only absolute path import are allowed here!!!
 import s3split.s3util
 import s3split.common
 import s3split.splitter
