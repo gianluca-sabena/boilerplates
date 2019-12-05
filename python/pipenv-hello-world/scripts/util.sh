@@ -9,8 +9,8 @@ set -o pipefail # exit on any errors in piped commands
 
 #ENVIRONMENT VARIABLES
 
-declare SCRIPT_DIR=""
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+declare SCRIPT_PATH=""
+SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 declare CURRENT_PATH
 CURRENT_PATH=$(pwd)
 declare APP_NAME="helloworld"
@@ -35,7 +35,7 @@ function parseCli() {
     case "${KEY}" in
     # exec command here
     create-pipenv-dev)
-      cd  "${SCRIPT_DIR}/../"
+      cd  "${SCRIPT_PATH}/../"
       pipenv install --dev
       # install current package in editable mode (use simlink to source code)
       # https://setuptools.readthedocs.io/en/latest/setuptools.html#development-mode
@@ -52,7 +52,7 @@ function parseCli() {
       mkdir -p "${TMP_VENV_PATH}"
       cd "${TMP_VENV_PATH}"
       pipenv --python 3.7
-      pipenv run pip install "${SCRIPT_DIR}/../"
+      pipenv run pip install "${SCRIPT_PATH}/../"
       echo ""
       echo "========== Test run cli: pipenv run ${APP_NAME} ========== "
       pipenv run ${APP_NAME}
@@ -62,18 +62,18 @@ function parseCli() {
       echo ""
     ;;
     run-python)
-      cd "${SCRIPT_DIR}/../"
+      cd "${SCRIPT_PATH}/../"
       pipenv run pip install -e .
-      pipenv run python "${SCRIPT_DIR}/../src/${APP_NAME}/main.py"
+      pipenv run python "${SCRIPT_PATH}/../src/${APP_NAME}/main.py"
     ;;
     run-cli)
-      cd "${SCRIPT_DIR}/../"
+      cd "${SCRIPT_PATH}/../"
       pipenv run pip install -e .
       pipenv run ${APP_NAME}
     ;;
 
     run-test)
-      cd "${SCRIPT_DIR}/../"
+      cd "${SCRIPT_PATH}/../"
       pipenv run pytest -v
     ;;
     -h | *)
@@ -86,24 +86,4 @@ function parseCli() {
 }
 
 
-#
-# genfilesrandom FOLDER SIZE_KB NUM_FILES
-#
-function genfilesrandom() {
-  local DEST_PATH=${1}
-  local SIZE=$((1024 * $2))
-  local NUM_FILES=$3
-  mkdir -p "${DEST_PATH}"
-  echo "Dest folder: ${DEST_PATH}"
-  echo "Size kb: ${SIZE}"
-  echo "Number of files: ${NUM_FILES}"
-  echo "Creating master file..."
-  head -c "$SIZE" /dev/urandom >"${DEST_PATH}/file_1.txt"
-  local counter=2
-  while [[ $counter -le $NUM_FILES ]]; do
-    echo "Duplicating file: $counter "
-    cp "${DEST_PATH}/file_1.txt" "${DEST_PATH}/file_${counter}.txt"
-    ((counter += 1))
-  done
-}
 parseCli "$@"
