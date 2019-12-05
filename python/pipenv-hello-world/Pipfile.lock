@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "76c45b2d52d7ebd677b1f0df153992495a4a21377e009248deebb62e6c084947"
+            "sha256": "c54d28d46a2beb264cd92801a4d35609d9178cc9882c74f04eaa6a5ed2b28a78"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -37,6 +37,10 @@
             ],
             "index": "pypi",
             "version": "==1.4.4"
+        },
+        "helloworld-package": {
+            "editable": true,
+            "path": "."
         },
         "importlib-metadata": {
             "hashes": [

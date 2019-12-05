@@ -8,6 +8,7 @@ pytest = "*"
 pep8 = "*"
 pylint = "*"
 autopep8 = "*"
+helloworld-package = {editable = true,path = "."}
 
 [packages]
 

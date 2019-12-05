@@ -36,10 +36,17 @@ function parseCli() {
     # exec command here
     create-pipenv-dev)
       cd  "${SCRIPT_PATH}/../"
-      pipenv install --dev
       # install current package in editable mode (use simlink to source code)
       # https://setuptools.readthedocs.io/en/latest/setuptools.html#development-mode
-      pipenv run pip install -e .
+      # https://pipenv-fork.readthedocs.io/en/latest/basics.html#editable-dependencies-e-g-e
+      pipenv install --dev
+      echo ""
+      echo "========== Test run cli: pipenv run ${APP_NAME} ========== "
+      pipenv run ${APP_NAME}
+      echo ""
+      echo "========== Test run module: pipenv run python -m helloworld.main ========== "
+      pipenv run python -m helloworld.main
+      echo ""
     ;;
     test-pip-install)
       export TMP_VENV_PATH="/tmp/pipenv/${APP_NAME}"
@@ -52,6 +59,7 @@ function parseCli() {
       mkdir -p "${TMP_VENV_PATH}"
       cd "${TMP_VENV_PATH}"
       pipenv --python 3.7
+      echo "========== Install ${APP_NAME} package name from source ${SCRIPT_PATH}/../setup.py ========== "
       pipenv run pip install "${SCRIPT_PATH}/../"
       echo ""
       echo "========== Test run cli: pipenv run ${APP_NAME} ========== "
