@@ -25,7 +25,7 @@ function parseCli() {
       echo "    - prepare-dev-venv"
       echo "    - run-python"
       echo "    - run-cli"
-      echo "    - pytest"
+      echo "    - run-test"
       echo "    - test-pip-install"
       exit 0
   fi
@@ -42,15 +42,24 @@ function parseCli() {
       pipenv run pip install -e .
     ;;
     test-pip-install)
+      export TMP_VENV_PATH="/tmp/pipenv/${APP_NAME}"
+      echo ""
+      echo "========== Create venv in temp folder: ${TMP_VENV_PATH} ========== "
       export PIPENV_IGNORE_VIRTUALENVS=1
       export PIPENV_VENV_IN_PROJECT="enabled"
       # export DISTUTILS_DEBUG="enabled"
-      rm -rf /tmp/${APP_NAME}
-      mkdir -p /tmp/${APP_NAME}
-      cd /tmp/${APP_NAME}
+      [ -d "${TMP_VENV_PATH}" ] && rm -rf "${TMP_VENV_PATH}"
+      mkdir -p "${TMP_VENV_PATH}"
+      cd "${TMP_VENV_PATH}"
       pipenv --python 3.7
       pipenv run pip install "${SCRIPT_DIR}/../"
+      echo ""
+      echo "========== Test run cli: pipenv run ${APP_NAME} ========== "
       pipenv run ${APP_NAME}
+      echo ""
+      echo "========== Test run module: pipenv run python -m helloworld.main ========== "
+      pipenv run python -m helloworld.main
+      echo ""
     ;;
     run-python)
       cd "${SCRIPT_DIR}/../"
