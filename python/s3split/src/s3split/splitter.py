@@ -24,13 +24,13 @@ logger = s3split.common.get_logger()
 
 
 class Splitter():
-    def __init__(self, event, s3manager, split):
+    def __init__(self, event, s3manager, fs_path, split):
         if not event.is_set():
             logger.debug(f"Split: {split.get('id')} - Create Splitter class for split: {split}")
             self._s3manager = s3manager
             self._event = event
             # self._args = args
-            self._fs_path = s3manager.fs_path
+            self._fs_path = fs_path
             self._s3_bucket = s3manager.s3_bucket
             self._s3_path = s3manager.s3_path
             self.split = split

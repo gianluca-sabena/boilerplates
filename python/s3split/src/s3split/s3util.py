@@ -13,6 +13,7 @@ import s3split.common
 logger = s3split.common.get_logger()
 urllib3.disable_warnings()
 
+
 class ProgressPercentage(object):
     files = dict()
 
@@ -30,29 +31,26 @@ class ProgressPercentage(object):
             self._seen_so_far += bytes_amount
             self._stats._update(self._filename, bytes_amount)
 
+
 class S3Manager():
-    def __init__(self, args, stats):
+
+    def __init__(self, s3_access_key, s3_secret_key, s3_endpoint, s3_use_ssl, s3_bucket, s3_path, stats):
         self._stats = stats
-        self._args = args
         self._session = boto3.session.Session()
-        self._client_config = botocore.config.Config(max_pool_connections=25)
+        self.s3_bucket = s3_bucket
+        self.s3_path = s3_path
+        #self.fs_path = fs_path
         self._s3_client = None
-        self._s3_client = self.get_client()
-        self.s3_bucket = args.s3_bucket
-        self.s3_path = args.s3_path
-        self.fs_path = args.fs_path
+        # create client from session (thread safe)
+        try:
+            self._s3_client = self._session.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key,
+                                                   endpoint_url=s3_endpoint, use_ssl=s3_use_ssl, verify=False, config=botocore.config.Config(max_pool_connections=25))
+        except ValueError as ex:
+            raise ValueError(f"S3 ValueError: {ex}")
+        except ClientError as ex:
+            raise ValueError(f"S3 ClientError: {ex}")
 
     def get_client(self):
-        if self._s3_client is None:
-            # self._s3_client = self._session.client('s3', aws_access_key_id=self._args.s3_access_key, aws_secret_access_key=self._args.s3_secret_key,
-            #                                        endpoint_url=self._args.s3_endpoint, use_ssl=self._args.s3_use_ssl, verify=False, config=self._client_config)
-            try:
-                self._s3_client = self._session.client('s3', aws_access_key_id=self._args.s3_access_key, aws_secret_access_key=self._args.s3_secret_key,
-                                                       endpoint_url=self._args.s3_endpoint, use_ssl=self._args.s3_use_ssl, verify=False, config=self._client_config)
-            except ValueError as ex:
-                raise ValueError(f"S3 ValueError: {ex}")            
-            except ClientError as ex:
-                raise ValueError(f"S3 ClientError: {ex}")
         return self._s3_client
 
     def bucket_create(self, bucket):
@@ -78,7 +76,7 @@ class S3Manager():
         try:
             self._s3_client.head_bucket(Bucket=bucket)
         except ValueError as e:
-            raise ValueError(f"S3 ValueError: {e}")            
+            raise ValueError(f"S3 ValueError: {e}")
         except ClientError as e:
 
             # If it was a 404 error, then the bucket does not exist.
@@ -90,11 +88,32 @@ class S3Manager():
         else:
             return True
 
+    def list_bucket_objects(self):
+        """List the objects in an Amazon S3 bucket
+
+        :param bucket_name: string
+        :return: List of bucket objects. If error, return None.
+        """
+
+        # Retrieve the list of bucket objects
+        try:
+            response = self._s3_client.list_objects_v2(Bucket=self.s3_bucket)
+        except ClientError as e:
+            # AllAccessDisabled error == bucket not found
+            logger.error(e)
+            return None
+        logger.info("List bucket response:",response)
+        # Only return the contents if we found some keys
+        if response['KeyCount'] > 0:
+            return response['Contents']
+
+        return None
+
     def upload_file(self, fs_path, bucket, s3_path):
-            config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
-                                    multipart_chunksize=1024 * 1024 * 64, use_threads=True)
-            progress = ProgressPercentage(self._stats, fs_path)
-            self._s3_client.upload_file(fs_path, bucket, s3_path,
-                                       Config=config,
-                                       Callback=progress
-                                       )
+        config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
+                                multipart_chunksize=1024 * 1024 * 64, use_threads=True)
+        progress = ProgressPercentage(self._stats, fs_path)
+        self._s3_client.upload_file(fs_path, bucket, s3_path,
+                                    Config=config,
+                                    Callback=progress
+                                    )

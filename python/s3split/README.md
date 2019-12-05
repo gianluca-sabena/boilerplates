@@ -23,3 +23,9 @@
   - python package <https://docs.python.org/3.7/tutorial/modules.html#packages>
 - console script <https://python-packaging.readthedocs.io/en/latest/command-line-scripts.html>
 - Add file `tests/conftest.py` to instruct pytest to add src dir to sys.path <https://stackoverflow.com/a/50156706/7568979>
+
+## Docs
+
+- s3 example
+  - Boto3 docs <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-examples.html>
+  - AWS python sdk <https://docs.aws.amazon.com/code-samples/latest/catalog/code-catalog-python-example_code-s3.html>

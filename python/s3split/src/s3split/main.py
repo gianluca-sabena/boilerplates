@@ -5,7 +5,6 @@ import concurrent.futures
 import threading
 import time
 import traceback
-
 import signal
 import tarfile
 import tempfile
@@ -73,7 +72,7 @@ def action_upload(args):
     splits = s3split.common.split_file_by_size(args.fs_path, args.tar_size)
     # Test s3 connection
     stats = Stats(args.stats_interval)
-    s3Manager = s3split.s3util.S3Manager(args, stats)
+    s3Manager = s3split.s3util.S3Manager(args.s3_access_key, args.s3_secret_key, args.s3_endpoint, args.s3_use_ssl, args.s3_bucket, args.s3_path, stats)
     s3Manager.get_client()
     # Test write access to bucket
     # s3Manager.bucket_exsist(args.s3_bucket)
@@ -92,8 +91,8 @@ def action_upload(args):
         # future_split = {executor.submit(splitter.Splitter, event, args, stats, split): split for split in splits}
         future_split = {}
         for split in splits:
-            s3manager = s3split.s3util.S3Manager(args, stats)
-            future = executor.submit(s3split.splitter.Splitter, event, s3manager, split)
+            s3manager = s3split.s3util.S3Manager(args.s3_access_key, args.s3_secret_key, args.s3_endpoint, args.s3_use_ssl, args.s3_bucket, args.s3_path, stats)
+            future = executor.submit(s3split.splitter.Splitter, event, s3manager, args.fs_path, split)
             future_split.update({future:split})
         logger.debug(f"List of futures: {future_split}")
         for future in concurrent.futures.as_completed(future_split):
