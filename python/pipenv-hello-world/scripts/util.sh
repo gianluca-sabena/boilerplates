@@ -19,9 +19,14 @@ declare APP_NAME="helloworld"
 
 function parseCli() {
   if [[ "$#" -eq 0 ]]; then
-      echo "  ${0}: "
+      echo "  ${0}: {command}"
       echo ""
-      echo "               minio-server               start minio server "
+      echo "  command:"
+      echo "    - prepare-dev-venv"
+      echo "    - run-python"
+      echo "    - run-cli"
+      echo "    - pytest"
+      echo "    - test-pip-install"
       exit 0
   fi
   while [[ "$#" -gt 0 ]]; do
@@ -29,6 +34,13 @@ function parseCli() {
     # declare VALUE="$2"
     case "${KEY}" in
     # exec command here
+    create-pipenv-dev)
+      cd  "${SCRIPT_DIR}/../"
+      pipenv install --dev
+      # install current package in editable mode (use simlink to source code)
+      # https://setuptools.readthedocs.io/en/latest/setuptools.html#development-mode
+      pipenv run pip install -e .
+    ;;
     test-pip-install)
       export PIPENV_IGNORE_VIRTUALENVS=1
       export PIPENV_VENV_IN_PROJECT="enabled"
@@ -37,16 +49,23 @@ function parseCli() {
       mkdir -p /tmp/${APP_NAME}
       cd /tmp/${APP_NAME}
       pipenv --python 3.7
-      ls "${SCRIPT_DIR}/../"
       pipenv run pip install "${SCRIPT_DIR}/../"
       pipenv run ${APP_NAME}
-      cd "${CURRENT_PATH}"
     ;;
-    run)
-      python "${SCRIPT_DIR}/../src/${APP_NAME}/app.py"
+    run-python)
+      cd "${SCRIPT_DIR}/../"
+      pipenv run pip install -e .
+      pipenv run python "${SCRIPT_DIR}/../src/${APP_NAME}/main.py"
     ;;
-    test)
-      python run pytest
+    run-cli)
+      cd "${SCRIPT_DIR}/../"
+      pipenv run pip install -e .
+      pipenv run ${APP_NAME}
+    ;;
+
+    run-test)
+      cd "${SCRIPT_DIR}/../"
+      pipenv run pytest -v
     ;;
     -h | *)
       ${0}
@@ -54,6 +73,7 @@ function parseCli() {
     esac
     shift
   done
+  cd "${CURRENT_PATH}"
 }
 
 

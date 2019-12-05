@@ -1,2 +1,2 @@
 def echo():
-    return "echo ns_mod_1.py"
+    return "echo from file src/helloworld/ns_mod_1.py"
