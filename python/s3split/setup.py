@@ -67,5 +67,5 @@ setup(
     #
     # For example, the following would provide a command called `sample` which
     # executes the function `main` from this package when invoked:
-    entry_points={"console_scripts": ["s3split=s3split.app:run_cli"]}
+    entry_points={"console_scripts": ["s3split=s3split.main:run_cli"]}
 )

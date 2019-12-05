@@ -12,6 +12,7 @@ rope = "*"
 pipenv-setup = "*"
 docker = "*"
 pylint = "*"
+s3split = {editable = true,path = "."}
 
 [packages]
 boto3 = "*"
