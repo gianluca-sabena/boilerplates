@@ -7,6 +7,7 @@ from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 import urllib3
 import threading
+import json
 
 import s3split.common
 
@@ -108,12 +109,24 @@ class S3Manager():
             return response['Contents']
 
         return None
+    
+    def upload_metadata(self, splits):
+        content=json.dumps(splits)
+        try:
+            self._s3_client.put_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json', Body=content)
+        except ClientError as e:
+            # AllAccessDisabled error == bucket not found
+            # NoSuchKey or InvalidRequest error == (dest bucket/obj == src bucket/obj)
+            logger.error(e)
+            return False
+        return True
 
-    def upload_file(self, fs_path, bucket, s3_path):
+    def upload_file(self, fs_path):
         config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
                                 multipart_chunksize=1024 * 1024 * 64, use_threads=True)
+        final_path = self.s3_path+'/'+os.path.basename(fs_path)
         progress = ProgressPercentage(self._stats, fs_path)
-        self._s3_client.upload_file(fs_path, bucket, s3_path,
+        self._s3_client.upload_file(fs_path, self.s3_bucket, final_path,
                                     Config=config,
                                     Callback=progress
                                     )

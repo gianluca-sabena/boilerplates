@@ -144,6 +144,7 @@ function parseCli() {
     esac
     shift
   done
+  cd "${CURRENT_PATH}"
 }
 
 

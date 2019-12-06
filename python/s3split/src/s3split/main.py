@@ -77,6 +77,8 @@ def action_upload(args):
     # Test write access to bucket
     # s3Manager.bucket_exsist(args.s3_bucket)
     s3Manager.bucket_create(args.s3_bucket)
+    # Upload metadata file
+    s3Manager.upload_metadata(splits)
     event = threading.Event()
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         def signal_handler(sig, frame):

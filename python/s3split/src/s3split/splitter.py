@@ -35,7 +35,7 @@ class Splitter():
             self._s3_path = s3manager.s3_path
             self.split = split
             # self.bucket = args.s3_bucket
-            self.name_tar = f"s3cmd-split-{self.split.get('id')}.tar"
+            self.name_tar = f"s3split-part-{self.split.get('id')}.tar"
             self.processing()
         else:
             logger.debug(f"Split: {split.get('id')} - Create Splitter class skipped because terminating event is set")
@@ -58,7 +58,7 @@ class Splitter():
                     logger.debug(f"Split: {self.split.get('id')} - Generated tar file {tar_file}")
                     # Start upload
                     if not self._event.is_set():
-                        self._s3manager.upload_file(tar_file, self._s3_bucket, self._s3_path+'/'+os.path.basename(tar_file))
+                        self._s3manager.upload_file(tar_file)
                     else:
                         logger.info(f"Split: {self.split.get('id')} - Upload interrupted because terminating event is set!")
         else:
