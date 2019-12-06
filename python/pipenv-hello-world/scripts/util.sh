@@ -79,7 +79,6 @@ function parseCli() {
       pipenv run pip install -e .
       pipenv run ${APP_NAME}
     ;;
-
     run-test)
       cd "${SCRIPT_PATH}/../"
       pipenv run pytest -v
