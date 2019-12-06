@@ -46,14 +46,7 @@ setup(
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        "boto3==1.10.33",
-        "botocore==1.13.33",
-        "docutils==0.15.2",
-        "jmespath==0.9.4",
-        "python-dateutil==2.8.0; python_version >= '2.7'",
-        "s3transfer==0.2.1",
-        "six==1.13.0",
-        "urllib3==1.25.7; python_version >= '3.4'",
+        "boto3"
     ],  # Optional
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"

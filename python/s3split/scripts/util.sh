@@ -25,7 +25,7 @@ function parseCli() {
       echo "  ${0}: {command}"
       echo ""
       echo "  command:"
-      echo "    - prepare-dev-venv"
+      echo "    - create-pipenv-dev"
       echo "    - run-python"
       echo "    - run-cli"
       echo "    - run-test"
@@ -77,12 +77,12 @@ function parseCli() {
     ;;
     run-python)
       cd "${SCRIPT_PATH}/../"
-      pipenv run pip install -e .
+      # pipenv run pip install -e .
       pipenv run python "${SCRIPT_PATH}/../src/${APP_NAME}/main.py"
     ;;
     run-cli)
       cd "${SCRIPT_PATH}/../"
-      pipenv run pip install -e .
+      # pipenv run pip install -e .
       pipenv run ${APP_NAME}
     ;;
     run-test)

@@ -3,7 +3,7 @@ import logging
 import os
 import pprint
  # pylint: disable=import-error
-import s3split.common 
+import s3split.common
 import s3split.main
 import s3split.s3util
 
@@ -20,6 +20,7 @@ MINIO_PATH="test"
 
 @pytest.fixture(scope="module")
 def docker_minio_fixture():
+    # TODO: add a check to pull image if not present
     import docker
     client = docker.from_env()
     # Check if minio is running

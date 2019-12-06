@@ -9,10 +9,9 @@ pep8 = "*"
 pycodestyle = "*"
 autopep8 = "*"
 rope = "*"
-pipenv-setup = "*"
 docker = "*"
 pylint = "*"
-s3split = {editable = true,path = "."}
+s3split = {path = ".",editable = true}
 
 [packages]
 boto3 = "*"
