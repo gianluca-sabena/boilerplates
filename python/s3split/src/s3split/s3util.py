@@ -103,23 +103,44 @@ class S3Manager():
             # AllAccessDisabled error == bucket not found
             logger.error(e)
             return None
-        logger.info("List bucket response:",response)
         # Only return the contents if we found some keys
         if response['KeyCount'] > 0:
             return response['Contents']
 
         return None
-    
+
     def upload_metadata(self, splits):
-        content=json.dumps(splits)
+
+        content = {
+            "info": {
+                "hostname": "",
+                "uname": "",
+                "env": ""
+            },
+            "splits": splits}
         try:
-            self._s3_client.put_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json', Body=content)
+            self._s3_client.put_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json', Body=json.dumps(content))
         except ClientError as e:
             # AllAccessDisabled error == bucket not found
             # NoSuchKey or InvalidRequest error == (dest bucket/obj == src bucket/obj)
             logger.error(e)
             return False
         return True
+
+    def download_metadata(self):
+        try:
+            logger.info(f"{self.s3_path+'/s3split-metadata.json'}")
+            stream = self._s3_client.get_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json')
+            if stream is not None:
+                data = stream['Body'].read().decode('utf-8')
+                metadata = json.loads(data)
+        except ClientError as e:
+            # AllAccessDisabled error == bucket not found
+            # NoSuchKey or InvalidRequest error == (dest bucket/obj == src bucket/obj)
+            logger.error(e)
+            return None
+        return metadata
+
 
     def upload_file(self, fs_path):
         config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,

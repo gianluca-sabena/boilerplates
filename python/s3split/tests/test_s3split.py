@@ -1,8 +1,8 @@
 import pytest
 import logging
 import os
-import pprint
- # pylint: disable=import-error
+from pprint import pformat
+# pylint: disable=import-error
 import s3split.common
 import s3split.main
 import s3split.s3util
@@ -13,9 +13,9 @@ DOCKER_MINIO_IMAGE = "minio/minio:RELEASE.2019-10-12T01-39-57Z"
 MINIO_ACCESS_KEY = "test_access"
 MINIO_SECRET_KEY = "test_secret"
 MINIO_ENDPOINT = "http://127.0.0.1:9000"
-MINIO_USE_SSL=False
-MINIO_BUCKET="s3split"
-MINIO_PATH="test"
+MINIO_USE_SSL = False
+MINIO_BUCKET = "s3split"
+MINIO_PATH = "test"
 
 
 @pytest.fixture(scope="module")
@@ -77,10 +77,18 @@ def test_minio_upload(docker_minio_fixture):
     size = 1024
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     generate_random_files(full_path, n_files, size)
-    s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--fs-path", full_path, "--s3-bucket", MINIO_BUCKET, "--tar-size", "10", "upload"])
-    # TODO: check files on minio
+    s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT,
+                           "--s3-bucket", MINIO_BUCKET, "--s3-path", MINIO_PATH, "upload", "--fs-path", full_path, "--tar-size", "10"])
+    # download metadata
+    stats = s3split.main.Stats(1)
+    s3 = s3split.s3util.S3Manager(MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_ENDPOINT, MINIO_USE_SSL, MINIO_BUCKET, MINIO_PATH, stats)
+    objects = s3.list_bucket_objects()
+    logger.info(pformat(objects))
+    metadata = s3.download_metadata()
+    logger.info(pformat(metadata))
 
-def test_s3_list_bucket():
+
+def NO_test_s3_list_bucket():
     stats = s3split.main.Stats(1)
     s3 = s3split.s3util.S3Manager(MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_ENDPOINT, MINIO_USE_SSL, MINIO_BUCKET, MINIO_PATH, stats)
     objects = s3.list_bucket_objects()

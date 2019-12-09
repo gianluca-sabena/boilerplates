@@ -78,7 +78,9 @@ def action_upload(args):
     # s3Manager.bucket_exsist(args.s3_bucket)
     s3Manager.bucket_create(args.s3_bucket)
     # Upload metadata file
-    s3Manager.upload_metadata(splits)
+    if not s3Manager.upload_metadata(splits):
+        logger.error("Metadata json file upload failed!")
+        raise SystemExit
     event = threading.Event()
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
         def signal_handler(sig, frame):
@@ -92,23 +94,28 @@ def action_upload(args):
         # Start the load operations and mark each future with its URL
         # future_split = {executor.submit(splitter.Splitter, event, args, stats, split): split for split in splits}
         future_split = {}
+        tars_uploaded = []
         for split in splits:
             s3manager = s3split.s3util.S3Manager(args.s3_access_key, args.s3_secret_key, args.s3_endpoint, args.s3_use_ssl, args.s3_bucket, args.s3_path, stats)
-            future = executor.submit(s3split.splitter.Splitter, event, s3manager, args.fs_path, split)
-            future_split.update({future:split})
+            splitter = s3split.splitter.Splitter(event, s3manager, args.fs_path, split)
+            future = executor.submit(splitter.run)
+            future_split.update({future:split.get('id')})
         logger.debug(f"List of futures: {future_split}")
         for future in concurrent.futures.as_completed(future_split):
             future_split[future]
             try:
                 data = future.result()
+                tars_uploaded.append(data)
             except Exception as exc:
                 logger.error(f"generated an exception: {exc}")
                 traceback_str = traceback.format_exc(exc)
                 logger.error(f"generated an exception: {traceback_str}")
             else:
-                logger.info(f"Split: {data.split.get('id')} - Completed task processing")
-    # logger.info(f"Debug stats: {stats._stats}")
+                logger.info(f"Split: {data['id']} Completed task processing")
+    logger.info(f"tars: {tars_uploaded}")
     stats.print()
+    # upload metadata with tars info
+
 
 
 def run_cli():

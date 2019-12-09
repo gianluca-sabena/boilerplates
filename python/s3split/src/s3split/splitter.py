@@ -36,7 +36,6 @@ class Splitter():
             self.split = split
             # self.bucket = args.s3_bucket
             self.name_tar = f"s3split-part-{self.split.get('id')}.tar"
-            self.processing()
         else:
             logger.debug(f"Split: {split.get('id')} - Create Splitter class skipped because terminating event is set")
 
@@ -59,14 +58,17 @@ class Splitter():
                     # Start upload
                     if not self._event.is_set():
                         self._s3manager.upload_file(tar_file)
+                        return {"path":tar_file,"id":self.split.get('id'), "size": None}
                     else:
                         logger.info(f"Split: {self.split.get('id')} - Upload interrupted because terminating event is set!")
+                        return None
         else:
             logger.info(f"Split: {self.split.get('id')} - Tar interrupted because terminating event is set!")
+            return None
 
-    def processing(self):
+    def run(self):
         logger.debug(f"Split: {self.split.get('id')} - Start processing")
         if not self._event.is_set():
-            self._tar()
+            return self._tar()
         else:
             logger.info(f"Split: {self.split.get('id')} - processing interrupted because terminating event is set!")
