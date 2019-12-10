@@ -185,7 +185,7 @@ class S3Manager():
 
         return None
 
-    def upload_metadata(self, splits):
+    def upload_metadata(self, splits=None, tars=None):
         """upload metadata file in json format"""
         content = {
             "info": {
@@ -193,6 +193,7 @@ class S3Manager():
                 "uname": "",
                 "env": ""
             },
+            "tars": tars,
             "splits": splits}
         try:
             self._s3_client.put_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json', Body=json.dumps(content))

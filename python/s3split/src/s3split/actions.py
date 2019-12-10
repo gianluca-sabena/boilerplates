@@ -1,7 +1,5 @@
 """main actions: upload, check"""
 import os
-import threading
-import signal
 import traceback
 import concurrent.futures
 import s3split.s3util
@@ -9,7 +7,7 @@ import s3split.common
 import s3split.splitter
 
 
-def action_upload(args):
+def action_upload(event, args):
     """upload splits to s3"""
     logger = s3split.common.get_logger()
     logger.info(f"Action: {args.action} {args.source} {args.target}")
@@ -29,16 +27,8 @@ def action_upload(args):
     if not s3_manager.upload_metadata(splits):
         logger.error("Metadata json file upload failed!")
         raise SystemExit
-    event = threading.Event()
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.threads) as executor:
-        def signal_handler(sig, frame): # pylint: disable=unused-argument
-            logger.info('You pressed Ctrl+C!... \n\nThe program will terminate AFTER ongoing file upload(s) complete\n\n')
-            # Send termination signal to threads
-            event.set()
-            executor.shutdown()
-        # Catch ctrl+c
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+
         # Start the load operations and mark each future with its URL
         # future_split = {executor.submit(splitter.Splitter, event, args, stats, split): split for split in splits}
         future_split = {}

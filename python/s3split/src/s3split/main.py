@@ -1,7 +1,8 @@
 """main: cli entry point"""
 import sys
 import argparse
-
+import threading
+import signal
 
 # This is the main file, only absolute path import are allowed here!!!
 import s3split.s3util
@@ -37,6 +38,15 @@ def parse_args(sys_args):
 
 def run_main(sys_args):
     """run main with sys args override, this allow tests"""
+    event = threading.Event()
+    def signal_handler(sig, frame): # pylint: disable=unused-argument
+        logger.info('You pressed Ctrl+C!... \n\nThe program will terminate AFTER ongoing file upload(s) complete\n\n')
+        # Send termination signal to threads
+        event.set()
+        #executor.shutdown()
+    # Catch ctrl+c
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
     logger = s3split.common.get_logger()
     args = parse_args(sys_args)
     logger.info(args)
@@ -45,7 +55,7 @@ def run_main(sys_args):
     logger.info(f"Stats interval print: {args.stats_interval} seconds")
     try:
         if args.action == "upload":
-            s3split.actions.action_upload(args)
+            s3split.actions.action_upload(event, args)
     except ValueError as ex:
         logger.error(f"ValueError: {ex}")
         raise ValueError(ex)
