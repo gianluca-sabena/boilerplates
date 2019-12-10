@@ -42,7 +42,7 @@ class Splitter():
                     # Start upload
                     if not self._event.is_set():
                         self._s3manager.upload_file(tar_file)
-                        return {"path": tar_file, "id": self.split.get('id'), "size": None}
+                        return {"name": os.path.join(self._s3_path,os.path.basename(tar_file)), "id": self.split.get('id'), "size": os.path.getsize(tar_file)}
                     self._logger.info(f"Split: {self.split.get('id')} - Upload interrupted because terminating event is set!")
                     return None
         else:

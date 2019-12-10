@@ -37,7 +37,7 @@ class S3Uri():
 class Stats():
     """Global stats ovject, updated from different working threads"""
 
-    def __init__(self, interval):
+    def __init__(self, interval=30):
         self._logger = s3split.common.get_logger()
         self._interval = interval
         self._stats = {}
@@ -56,8 +56,9 @@ class Stats():
         """print stats with logger"""
         completed = 0
         total = 0
-        elapsed_time = time.time() - self._time_start
-        mb_sent = self._byte_sent / 1024 / 1024
+        elapsed_time = round(time.time() - self._time_start, 1)
+        mb_sent = round(self._byte_sent / 1024 / 1024, 1)
+        rate = round((mb_sent)/elapsed_time, 1)
         msg = ""
         for file in self._stats:
             total += 1
@@ -65,10 +66,14 @@ class Stats():
             if stat['completed'] is True:
                 completed += 1
             else:
-                percentage = (stat['transferred'] / stat['size']) * 100
+                percentage = round((stat['transferred'] / stat['size']) * 100, 1)
                 msg += f" - {file} ({percentage}%)\n"
-        self._logger.info(
-            f"\n --- stats ---\nElapsed time: {elapsed_time}\nMb sent: {mb_sent}\nTransfer rate: {(mb_sent)/elapsed_time} Mb/s\nFile completed: {completed}/{total}\nIn progress:\n{msg}")
+        txt = (f"\n --- stats ---\nElapsed time: {elapsed_time} seconds\n"
+               f"Data sent: {mb_sent} Mb\nTransfer rate: {rate} Mb/s\n"
+               f"File completed: {completed}/{total}")
+        if len(msg) > 0:
+            txt += f"\nUpload(s) in progress:\n{msg}"
+        self._logger.info(txt)
 
     def _update(self, file, byte):
         with self._lock:
@@ -174,7 +179,7 @@ class S3Manager():
 
         # Retrieve the list of bucket objects
         try:
-            response = self._s3_client.list_objects_v2(Bucket=self.s3_bucket)
+            response = self._s3_client.list_objects_v2(Bucket=self.s3_bucket, Prefix=self.s3_path)
         except ClientError as ex:
             # AllAccessDisabled error == bucket not found
             self._logger.error(ex)
@@ -207,7 +212,6 @@ class S3Manager():
     def download_metadata(self):
         """download metadata and parse json"""
         try:
-            self._logger.info(f"{self.s3_path+'/s3split-metadata.json'}")
             stream = self._s3_client.get_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json')
             if stream is not None:
                 data = stream['Body'].read().decode('utf-8')

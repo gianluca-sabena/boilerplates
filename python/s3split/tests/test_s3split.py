@@ -80,15 +80,32 @@ def test_minio_upload(docker_minio_fixture):
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     generate_random_files(full_path, n_files, size)
     s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT,
-                           "upload", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}", "--tar-size", "10"])
+                           "upload", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}", "--tar-size", "10", "--stats-interval","1"])
+    s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT,
+                           "check", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}"])
+
     # download metadata
-    stats = s3split.s3util.Stats(1)
-    s3_manager = s3split.s3util.S3Manager(MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_ENDPOINT,
-                                          MINIO_USE_SSL, MINIO_BUCKET, MINIO_PATH, stats)
-    objects = s3_manager.list_bucket_objects()
-    LOGGER.info(pformat(objects))
-    metadata = s3_manager.download_metadata()
-    LOGGER.info(pformat(metadata))
+    # stats = s3split.s3util.Stats(1)
+    # s3_manager = s3split.s3util.S3Manager(MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_ENDPOINT,
+    #                                       MINIO_USE_SSL, MINIO_BUCKET, MINIO_PATH, stats)
+    # objects = s3_manager.list_bucket_objects()
+    # metadata = s3_manager.download_metadata()
+    # tar_data = {tar['name']: tar['size'] for tar in metadata["tars"]}
+    # s3_data = {obj['Key']: obj['Size'] for obj in objects}
+    #LOGGER.info(pformat(objects))
+    #LOGGER.info(pformat(metadata))
+    #LOGGER.info(pformat(tar_data))
+    #LOGGER.info(pformat(s3_data))
+    # if len(metadata["splits"]) != len(metadata["tars"]):
+    #     LOGGER.error("Number of sllits and tar files is different! Incomplete upload!")
+    # for key, val in tar_data.items():
+    #     if s3_data.get(key) is None:
+    #         LOGGER.error(f"Split part {key} not found on S3! Inclomplete uploads detected!")
+    #     elif s3_data.get(key) == val:
+    #         LOGGER.info(f"Check size for split part {key}: OK")
+    #     elif s3_data.get(key) != val:
+    #         LOGGER.error(f"Check size for split part {key} failed! Expected size: {val} comparade to s3 object size: {s3_data.get('key')} ")
+
 
 
 def NO_test_s3_list_bucket():
