@@ -80,7 +80,7 @@ def test_minio_upload(docker_minio_fixture):
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     generate_random_files(full_path, n_files, size)
     s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT,
-                           "upload", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}", "--tar-size", "10", "--stats-interval","1"])
+                           "upload", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}", "--tar-size", "10", "--stats-interval","1","--recovery","true"])
     s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT,
                            "check", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}"])
 

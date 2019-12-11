@@ -2,7 +2,6 @@
 import os
 import threading
 import json
-import time
 import re
 import boto3
 import boto3.session
@@ -32,60 +31,6 @@ class S3Uri():
         # if len(match.groups) == 0
         self.bucket = groups[0]
         self.object = groups[1]
-
-
-class Stats():
-    """Global stats ovject, updated from different working threads"""
-
-    def __init__(self, interval=30):
-        self._logger = s3split.common.get_logger()
-        self._interval = interval
-        self._stats = {}
-        self._byte_sent = 0
-        self._update_count = 0
-        self._time_start = time.time()
-        self._time_update = 0
-        self._time_print_stat = time.time()
-        self._lock = threading.Lock()
-
-    def _add(self, file):
-        with self._lock:
-            self._stats[file] = {'size': float(os.path.getsize(file)), 'transferred': 0, 'completed': False}
-
-    def print(self):
-        """print stats with logger"""
-        completed = 0
-        total = 0
-        elapsed_time = round(time.time() - self._time_start, 1)
-        mb_sent = round(self._byte_sent / 1024 / 1024, 1)
-        rate = round((mb_sent)/elapsed_time, 1)
-        msg = ""
-        for file in self._stats:
-            total += 1
-            stat = self._stats[file]
-            if stat['completed'] is True:
-                completed += 1
-            else:
-                percentage = round((stat['transferred'] / stat['size']) * 100, 1)
-                msg += f" - {file} ({percentage}%)\n"
-        txt = (f"\n --- stats ---\nElapsed time: {elapsed_time} seconds\n"
-               f"Data sent: {mb_sent} Mb\nTransfer rate: {rate} Mb/s\n"
-               f"File completed: {completed}/{total}")
-        if len(msg) > 0:
-            txt += f"\nUpload(s) in progress:\n{msg}"
-        self._logger.info(txt)
-
-    def _update(self, file, byte):
-        with self._lock:
-            self._time_update = time.time()
-            self._stats[file]['transferred'] += byte
-            self._byte_sent += byte
-            if self._stats[file]['transferred'] == self._stats[file]['size']:
-                self._stats[file]['completed'] = True
-            self._update_count += 1
-            if time.time() - self._time_print_stat > self._interval:
-                self._time_print_stat = time.time()
-                self.print()
 
 
 class ProgressPercentage(object):
@@ -134,11 +79,11 @@ class S3Manager():
         """return a oto3 client"""
         return self._s3_client
 
-    def bucket_create(self, bucket):
+    def bucket_create(self):
         """create a bucket"""
-        if not self.bucket_exsist(bucket):
+        if not self.bucket_exsist():
             try:
-                self._s3_client.create_bucket(Bucket=bucket)
+                self._s3_client.create_bucket(Bucket=self.s3_bucket)
             except ClientError as ex:
                 if ex.response['Error']['Code'] == 'InvalidBucketName':
                     raise ValueError(f"S3 ClientError: {ex}")
@@ -147,7 +92,7 @@ class S3Manager():
             else:
                 return True
 
-    def bucket_exsist(self, bucket):
+    def bucket_exsist(self):
         """Check if S3 bucket exsist
 
         :param bucket_name: Bucket to create
@@ -156,7 +101,7 @@ class S3Manager():
         # Check if a bucket exsists
         # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/migrations3.html?highlight=clienterror#accessing-a-bucket
         try:
-            self._s3_client.head_bucket(Bucket=bucket)
+            self._s3_client.head_bucket(Bucket=self.s3_bucket)
         except ValueError as ex:
             raise ValueError(f"S3 ValueError: {ex}")
         except ClientError as ex:
@@ -200,6 +145,8 @@ class S3Manager():
             },
             "tars": tars,
             "splits": splits}
+        if not self.bucket_exsist():
+            self.bucket_create()
         try:
             self._s3_client.put_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json', Body=json.dumps(content))
         except ClientError as ex:
