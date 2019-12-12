@@ -130,7 +130,8 @@ class Action():
         #                             "and --recovery parameter is set, recovery upload from remote metadata files"))
         #             # To do
         #         else:
-        #             logger.warning("Remote S3 bucket contain a metadata file!!!! Use --recovery parameter to recovery upload or delete bucket")
+        #             logger.warning(("Remote S3 bucket contain a metadata file!!!!"
+        #                             "Use --recovery parameter to recovery upload or delete bucket"))
         #             raise ValueError("Remote S3 bucket contain a metadata file")
 
         # Upload metadata file
@@ -164,4 +165,3 @@ class Action():
             self._logger.error("Metadata json file upload failed!")
             raise SystemExit
         self._stats.print()
-
