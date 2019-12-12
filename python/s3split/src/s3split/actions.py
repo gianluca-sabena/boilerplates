@@ -50,9 +50,12 @@ class Stats():
             txt += f"\nUpload(s) in progress:\n{msg}"
         self._logger.info(txt)
 
-    def _update(self, file, byte):
+    def update(self, file, byte):
+        """update byte sent for a file"""
         with self._lock:
-            self._time_update = time.time()
+            # add new file
+            if self._stats.get(file) is None:
+                self._stats[file] = {'size': float(os.path.getsize(file)), 'transferred': 0, 'completed': False}
             self._stats[file]['transferred'] += byte
             self._byte_sent += byte
             if self._stats[file]['transferred'] == self._stats[file]['size']:
@@ -70,7 +73,7 @@ class Action():
         self._args = args
         self._event = threading.Event()
         self._logger = s3split.common.get_logger()
-        self._stats = Stats()
+        self._stats = Stats(args.stats_interval)
         self._executor = None
         # Validate
         if self._args.source is not None and not os.path.isdir(self._args.source):
@@ -78,7 +81,7 @@ class Action():
         # Validate
         self._s3uri = s3split.s3util.S3Uri(self._args.target)
         self._s3_manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                                                    self._args.s3_use_ssl, self._s3uri.bucket, self._s3uri.object, self._stats)
+                                                    self._args.s3_use_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
         # check S3 connection with dedicate method
         self._s3_manager.bucket_exsist()
 
@@ -145,7 +148,7 @@ class Action():
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
             for split in splits:
                 s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                                                     self._args.s3_use_ssl, self._s3uri.bucket, self._s3uri.object, self._stats)
+                                                     self._args.s3_use_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
                 splitter = s3split.splitter.Splitter(self._event, s3manager, self._args.source, split)
                 future = executor.submit(splitter.run)
                 future_split.update({future: split.get('id')})

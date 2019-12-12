@@ -37,27 +37,27 @@ class ProgressPercentage(object):
     """progress upload callback from boto3"""
     files = dict()
 
-    def __init__(self, stats, filename):
+    def __init__(self, cb_stats_update, filename):
         self._filename = filename
-        self._stats = stats
+        self._cb_stats_update = cb_stats_update
         self._size = float(os.path.getsize(filename))
         self._seen_so_far = 0
-        stats._add(filename)
         self._lock = threading.Lock()
 
     def __call__(self, bytes_amount):
         # To simplify, assume this is hooked up to a single filename
         with self._lock:
             self._seen_so_far += bytes_amount
-            self._stats._update(self._filename, bytes_amount)
+            if callable(self._cb_stats_update):
+                self._cb_stats_update(self._filename, bytes_amount)
 
 
 class S3Manager():
     """Manage S3 connection with boto3"""
 
-    def __init__(self, s3_access_key, s3_secret_key, s3_endpoint, s3_use_ssl, s3_bucket, s3_path, stats):
+    def __init__(self, s3_access_key, s3_secret_key, s3_endpoint, s3_use_ssl, s3_bucket, s3_path, cb_stats_update = None):
         self._logger = s3split.common.get_logger()
-        self._stats = stats
+        self._cb_stats_update = cb_stats_update
         self._session = boto3.session.Session()
         self.s3_bucket = s3_bucket
         self.s3_path = s3_path
@@ -175,7 +175,7 @@ class S3Manager():
         config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
                                 multipart_chunksize=1024 * 1024 * 64, use_threads=True)
         final_path = self.s3_path+'/'+os.path.basename(fs_path)
-        progress = ProgressPercentage(self._stats, fs_path)
+        progress = ProgressPercentage(self._cb_stats_update, fs_path)
         self._s3_client.upload_file(fs_path, self.s3_bucket, final_path,
                                     Config=config,
                                     Callback=progress

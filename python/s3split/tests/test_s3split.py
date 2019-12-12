@@ -75,11 +75,11 @@ def test_minio_invalid_bucket(docker_minio_fixture):
 
 
 def test_minio_upload(docker_minio_fixture):
-    n_files = 100
+    n_files = 200
     size = 1024
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     generate_random_files(full_path, n_files, size)
-    s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT,
+    s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT, "--threads","2",
                            "upload", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}", "--tar-size", "10", "--stats-interval","1","--recovery","true"])
     s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT,
                            "check", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}"])
@@ -104,12 +104,13 @@ def test_minio_upload(docker_minio_fixture):
     #     elif s3_data.get(key) == val:
     #         LOGGER.info(f"Check size for split part {key}: OK")
     #     elif s3_data.get(key) != val:
-    #         LOGGER.error(f"Check size for split part {key} failed! Expected size: {val} comparade to s3 object size: {s3_data.get('key')} ")
+    #         LOGGER.error((f"Check size for split part {key} failed! "
+    #                        "Expected size: {val} comparade to s3 object size: {s3_data.get('key')} "))
 
 
 
 def NO_test_s3_list_bucket():
-    stats = s3split.s3util.Stats(1)
+    stats = s3split.actions.Stats(1)
     s3_manager = s3split.s3util.S3Manager(MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_ENDPOINT,
                                           MINIO_USE_SSL, MINIO_BUCKET, MINIO_PATH, stats)
     objects = s3_manager.list_bucket_objects()
