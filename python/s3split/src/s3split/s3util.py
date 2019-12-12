@@ -55,7 +55,7 @@ class ProgressPercentage(object):
 class S3Manager():
     """Manage S3 connection with boto3"""
 
-    def __init__(self, s3_access_key, s3_secret_key, s3_endpoint, s3_use_ssl, s3_bucket, s3_path, cb_stats_update = None):
+    def __init__(self, s3_access_key, s3_secret_key, s3_endpoint, s3_use_ssl, s3_bucket, s3_path, cb_stats_update=None):
         self._logger = s3split.common.get_logger()
         self._cb_stats_update = cb_stats_update
         self._session = boto3.session.Session()
@@ -75,22 +75,24 @@ class S3Manager():
         except ClientError as ex:
             raise ValueError(f"S3 ClientError: {ex}")
 
+    def _wrap_exception(self, ex):
+        "exit when detect a fatal client exception"
+        self._logger.error(f"Boto3 client exception: {ex}")
+        raise SystemExit(f"Fatal boto3 exception: {ex}")
+
     def get_client(self):
-        """return a oto3 client"""
+        """return boto3 client"""
         return self._s3_client
 
     def bucket_create(self):
         """create a bucket"""
-        if not self.bucket_exsist():
-            try:
-                self._s3_client.create_bucket(Bucket=self.s3_bucket)
-            except ClientError as ex:
-                if ex.response['Error']['Code'] == 'InvalidBucketName':
-                    raise ValueError(f"S3 ClientError: {ex}")
-                else:
-                    return False
-            else:
-                return True
+        if self.bucket_exsist():
+            return True
+        try:
+            self._s3_client.create_bucket(Bucket=self.s3_bucket)
+            return True
+        except ClientError as ex:
+            self._wrap_exception(ex)
 
     def bucket_exsist(self):
         """Check if S3 bucket exsist
@@ -102,18 +104,15 @@ class S3Manager():
         # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/migrations3.html?highlight=clienterror#accessing-a-bucket
         try:
             self._s3_client.head_bucket(Bucket=self.s3_bucket)
-        except ValueError as ex:
-            raise ValueError(f"S3 ValueError: {ex}")
+            return True
+        # except ValueError as ex:
+        #     raise ValueError(f"S3 ValueError: {ex}")
         except ClientError as ex:
-
             # If it was a 404 error, then the bucket does not exist.
             if ex.response['Error']['Code'] == '404':
                 return False
-            else:
-                self._logger.error(ex, ex.response)
-                raise ValueError(f"S3 ClientError: {ex}")
-        else:
-            return True
+            self._wrap_exception(ex)
+            #raise ValueError(f"S3 ClientError: {ex}")
 
     def list_bucket_objects(self):
         """List the objects in an Amazon S3 bucket
@@ -125,15 +124,13 @@ class S3Manager():
         # Retrieve the list of bucket objects
         try:
             response = self._s3_client.list_objects_v2(Bucket=self.s3_bucket, Prefix=self.s3_path)
+            # Only return the contents if we found some keys
+            if response['KeyCount'] > 0:
+                return response['Contents']
+            return None
         except ClientError as ex:
             # AllAccessDisabled error == bucket not found
-            self._logger.error(ex)
-            return None
-        # Only return the contents if we found some keys
-        if response['KeyCount'] > 0:
-            return response['Contents']
-
-        return None
+            self._wrap_exception(ex)
 
     def upload_metadata(self, splits=None, tars=None):
         """upload metadata file in json format"""
@@ -149,12 +146,9 @@ class S3Manager():
             self.bucket_create()
         try:
             self._s3_client.put_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json', Body=json.dumps(content))
+            return True
         except ClientError as ex:
-            # AllAccessDisabled error == bucket not found
-            # NoSuchKey or InvalidRequest error == (dest bucket/obj == src bucket/obj)
-            self._logger.error(ex)
-            return False
-        return True
+            self._wrap_exception(ex)
 
     def download_metadata(self):
         """download metadata and parse json"""
@@ -162,13 +156,9 @@ class S3Manager():
             stream = self._s3_client.get_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json')
             if stream is not None:
                 data = stream['Body'].read().decode('utf-8')
-                metadata = json.loads(data)
+                return json.loads(data)
         except ClientError as ex:
-            # AllAccessDisabled error == bucket not found
-            # NoSuchKey or InvalidRequest error == (dest bucket/obj == src bucket/obj)
-            self._logger.error(ex)
-            return None
-        return metadata
+            self._wrap_exception(ex)
 
     def upload_file(self, fs_path):
         """upload a single file with multiple parallel (concurrency) worlkers"""
@@ -176,7 +166,10 @@ class S3Manager():
                                 multipart_chunksize=1024 * 1024 * 64, use_threads=True)
         final_path = self.s3_path+'/'+os.path.basename(fs_path)
         progress = ProgressPercentage(self._cb_stats_update, fs_path)
-        self._s3_client.upload_file(fs_path, self.s3_bucket, final_path,
-                                    Config=config,
-                                    Callback=progress
-                                    )
+        try:
+            self._s3_client.upload_file(fs_path, self.s3_bucket, final_path,
+                                        Config=config,
+                                        Callback=progress
+                                        )
+        except ClientError as ex:
+            self._wrap_exception(ex)
