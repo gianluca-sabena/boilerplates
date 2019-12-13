@@ -30,7 +30,7 @@ def parse_args(sys_args):
     parser_upload.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
     # parser_upload.add_argument('--recovery', help='recovery upload if s3 bucket contains metadata file',
     #                            required=False, type=bool, default=False)
-    parser_check.add_argument('source', help="Local filesystem directory")
+    #parser_check.add_argument('source', help="Local filesystem directory")
     parser_check.add_argument('target', help="S3 path in the form s3://bucket/...")
     return parser.parse_args(sys_args)
 

@@ -85,7 +85,7 @@ class Action():
         elif args.action == "download":
             self._s3uri = s3split.s3util.S3Uri(self._args.source)
             self._fsuri = self._args.target
-        elif args.action == "download":
+        elif args.action == "check":
             self._s3uri = s3split.s3util.S3Uri(self._args.source)
             self._fsuri = None
 
@@ -107,10 +107,6 @@ class Action():
         metadata = self._s3_manager.download_metadata()
         tar_data = {tar['name']: tar['size'] for tar in metadata["tars"]}
         s3_data = {obj['Key']: obj['Size'] for obj in objects}
-        # LOGGER.info(pformat(objects))
-        # LOGGER.info(pformat(metadata))
-        # LOGGER.info(pformat(tar_data))
-        # LOGGER.info(pformat(s3_data))
         errors = False
         if len(metadata["splits"]) != len(metadata["tars"]):
             self._logger.error("Number of slplits and tar files is different! Incomplete upload!")
@@ -138,17 +134,8 @@ class Action():
             metadata = self._s3_manager.download_metadata()
             if metadata is not None and len(metadata.get('splits')) > 0:
                 self._logger.warning("Remote S3 bucket contains a metadata file!")
-        #         if self._args.recovery is True:
-        #             logger.warning(("Remote S3 bucket contains a metadata file "
-        #                             "and --recovery parameter is set, recovery upload from remote metadata files"))
-        #             # To do
-        #         else:
-        #             logger.warning(("Remote S3 bucket contain a metadata file!!!!"
-        #                             "Use --recovery parameter to recovery upload or delete bucket"))
-        #             raise ValueError("Remote S3 bucket contain a metadata file")
-
+                # TODO: If there is a remote metadata? exit and force user to clean bucket?
         # Upload metadata file
-
         splits = s3split.common.split_file_by_size(self._args.source, self._args.tar_size)
         tars_uploaded = []
         future_split = {}

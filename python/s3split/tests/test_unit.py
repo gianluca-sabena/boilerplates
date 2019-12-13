@@ -15,6 +15,12 @@ def test_s3_uri():
     test = s3_uri.bucket == "aaa" and s3_uri.object == "bbb"
     assert test
 
+@pytest.mark.s3
+def test_s3_uri_long():
+    "parse valid long s3 string"
+    s3_uri = s3split.s3util.S3Uri("s3://aaa/bbb/ccc/ddd")
+    test = s3_uri.bucket == "aaa" and s3_uri.object == "bbb/ccc/ddd"
+    assert test
 
 @pytest.mark.s3
 def test_s3_uri_missing_path():
