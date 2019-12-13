@@ -18,7 +18,8 @@ def parse_args(sys_args):
     parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")
     parser.add_argument('--s3-access-key', help='S3 access key', required=True, default="")
     parser.add_argument('--s3-endpoint', help='S3 endpoint full hostname in the form http(s)://myhost:port', required=True)
-    parser.add_argument('--s3-use-ssl', help='S3 endpoint ssl', required=False, default=False)
+    #parser.add_argument('--s3-use-ssl', help='S3 endpoint ssl', required=False, default=False)
+    parser.add_argument('--s3-verify-ssl', help='verfiy S3 endpoint ssl certificate', required=False, default=True)
     parser.add_argument('--threads', help='Number of parallel threads ', required=False, type=int, default=5)
     parser.add_argument('--stats-interval', help='Seconds between two stats print', required=False, type=int, default=30)
     subparsers = parser.add_subparsers(dest='action')
@@ -27,8 +28,8 @@ def parse_args(sys_args):
     parser_upload.add_argument('source', help="Local filesystem directory")
     parser_upload.add_argument('target', help="S3 path in the form s3://bucket/path (path is required!)")
     parser_upload.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
-    parser_upload.add_argument('--recovery', help='recovery upload if s3 bucket contains metadata file',
-                               required=False, type=bool, default=False)
+    # parser_upload.add_argument('--recovery', help='recovery upload if s3 bucket contains metadata file',
+    #                            required=False, type=bool, default=False)
     parser_check.add_argument('source', help="Local filesystem directory")
     parser_check.add_argument('target', help="S3 path in the form s3://bucket/...")
     return parser.parse_args(sys_args)

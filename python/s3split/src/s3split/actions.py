@@ -79,9 +79,18 @@ class Action():
         if self._args.source is not None and not os.path.isdir(self._args.source):
             raise ValueError(f"source: '{self._args.source}' is not a directory")
         # Validate
-        self._s3uri = s3split.s3util.S3Uri(self._args.target)
+        if args.action == "upload":
+            self._s3uri = s3split.s3util.S3Uri(self._args.target)
+            self._fsuri = self._args.source
+        elif args.action == "download":
+            self._s3uri = s3split.s3util.S3Uri(self._args.source)
+            self._fsuri = self._args.target
+        elif args.action == "download":
+            self._s3uri = s3split.s3util.S3Uri(self._args.source)
+            self._fsuri = None
+        
         self._s3_manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                                                    self._args.s3_use_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
+                                                    self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
         # check S3 connection with dedicate method
         self._s3_manager.bucket_exsist()
 
@@ -123,13 +132,14 @@ class Action():
         self._logger.info(f"Tar object max size: {self._args.tar_size} MB")
         self._logger.info(f"Upload started! Print stats evry: {self._args.stats_interval} seconds")
         # Check if bucket is empty and if a metadata file is present
-        # objects = s3_manager.list_bucket_objects()
-        # if objects is not None and len(objects) > 0:
-        #     logger.warning(f"Remote S3 bucket is not empty!!!!!")
-        #     metadata = s3_manager.download_metadata()
-        #     if metadata is not None and len(metadata.get('splits')) > 0:
+        objects = self._s3_manager.list_bucket_objects()
+        if objects is not None and len(objects) > 0:
+            self._logger.warning(f"Remote S3 bucket is not empty!!!!!")
+            metadata = self._s3_manager.download_metadata()
+            if metadata is not None and len(metadata.get('splits')) > 0:
+                self._logger.warning("Remote S3 bucket contains a metadata file!")
         #         if self._args.recovery is True:
-        #             logger.warning(("Remote S3 bucket contain a metadata file "
+        #             logger.warning(("Remote S3 bucket contains a metadata file "
         #                             "and --recovery parameter is set, recovery upload from remote metadata files"))
         #             # To do
         #         else:
@@ -148,7 +158,7 @@ class Action():
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
             for split in splits:
                 s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                                                     self._args.s3_use_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
+                                                     self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
                 splitter = s3split.splitter.Splitter(self._event, s3manager, self._args.source, split)
                 future = executor.submit(splitter.run)
                 future_split.update({future: split.get('id')})

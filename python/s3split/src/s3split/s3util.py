@@ -9,6 +9,7 @@ import botocore
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
 import urllib3
+from urllib.parse import urlparse
 import s3split.common
 
 # logger = s3split.common.get_logger()
@@ -56,7 +57,7 @@ class ProgressPercentage(object):
 class S3Manager():
     """Manage S3 connection with boto3"""
 
-    def __init__(self, s3_access_key, s3_secret_key, s3_endpoint, s3_use_ssl, s3_bucket, s3_path, cb_stats_update=None):
+    def __init__(self, s3_access_key, s3_secret_key, s3_endpoint, s3_verify_ssl, s3_bucket, s3_path, cb_stats_update=None):
         self._logger = s3split.common.get_logger()
         self._cb_stats_update = cb_stats_update
         self._session = boto3.session.Session()
@@ -68,8 +69,13 @@ class S3Manager():
         try:
             # TODO: detect ssl from endpoint true if start with https:
             # TODO: pass verify form command line argument
+            url = urlparse(s3_endpoint)
+            self._s3_use_ssl = False
+            if url.scheme == "https":
+                self._s3_use_ssl = True
+
             self._s3_client = self._session.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key,
-                                                   endpoint_url=s3_endpoint, use_ssl=s3_use_ssl, verify=False,
+                                                   endpoint_url=s3_endpoint, use_ssl=self._s3_use_ssl, verify=s3_verify_ssl,
                                                    config=botocore.config.Config(max_pool_connections=25))
         except ValueError as ex:
             raise ValueError(f"S3 ValueError: {ex}")
@@ -80,6 +86,7 @@ class S3Manager():
         "exit when detect a fatal client exception"
         self._logger.error(f"Boto3 client exception: {ex}")
         raise SystemExit(f"Fatal boto3 exception: {ex}")
+
 
     def get_client(self):
         """return boto3 client"""

@@ -1,5 +1,5 @@
 # pylint: disable=missing-function-docstring,unused-argument,redefined-outer-name
-"""test"""
+"""test full application"""
 from pprint import pformat
 import pytest
 import s3split.common
@@ -51,9 +51,10 @@ def test_minio_upload(docker_minio_fixture):
     common.generate_random_files(full_path, n_files, size)
     s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY, "--s3-endpoint", common.MINIO_ENDPOINT,
                            "--threads", "2", "--stats-interval", "1", "upload", full_path, f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}",
-                           "--tar-size", "10", "--recovery", "true"])
+                           "--tar-size", "10"])
     s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY, "--s3-endpoint", common.MINIO_ENDPOINT,
                            "check", full_path, f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}"])
+    
 
     # download metadata
     # stats = s3split.s3util.Stats(1)
@@ -79,26 +80,6 @@ def test_minio_upload(docker_minio_fixture):
     #                        "Expected size: {val} comparade to s3 object size: {s3_data.get('key')} "))
 
 
-@pytest.mark.s3
-def test_s3_list_bucket():
-    "full s3 operation"
-    # stats = s3split.actions.Stats(1)
-    s3_manager = s3split.s3util.S3Manager(common.MINIO_ACCESS_KEY, common.MINIO_SECRET_KEY, common.MINIO_ENDPOINT,
-                                          common.MINIO_USE_SSL, common.MINIO_BUCKET, common.MINIO_PATH)
-    s3_manager.bucket_exsist()
-    s3_manager.create_bucket()
-    objects = s3_manager.list_bucket_objects()
-    LOGGER.info(objects)
 
 
-@pytest.mark.last
-def test_s3_uri():
-    s3_uri = s3split.s3util.S3Uri("s3://aaa/bbb")
-    test = s3_uri.bucket == "aaa" and s3_uri.object == "bbb"
-    assert test
 
-
-@pytest.mark.last
-def test_s3_uri_missing_path():
-    with pytest.raises(SystemExit, match=r'S3 URI must contains bucket and path s3://bucket/path'):
-        assert s3split.s3util.S3Uri("s3://aaa")

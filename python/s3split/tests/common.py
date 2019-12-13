@@ -1,6 +1,5 @@
 "shared test functions"
 import os
-import pytest
 import docker
 import s3split.common
 
@@ -10,7 +9,7 @@ DOCKER_MINIO_IMAGE = "minio/minio:RELEASE.2019-10-12T01-39-57Z"
 MINIO_ACCESS_KEY = "test_access"
 MINIO_SECRET_KEY = "test_secret"
 MINIO_ENDPOINT = "http://127.0.0.1:9000"
-MINIO_USE_SSL = False
+MINIO_VERIFY_SSL = False
 MINIO_BUCKET = "s3split"
 MINIO_PATH = "test"
 
