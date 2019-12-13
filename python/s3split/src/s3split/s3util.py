@@ -32,9 +32,6 @@ class S3Uri():
         self.object = groups[1]
         if len(self.object) == 0:
             raise SystemExit(f"S3 URI must contains bucket and path s3://bucket/path")
-        # if len(match.groups()) == 2:
-        # else:
-        #     self.object = "s3split"
 
 
 class ProgressPercentage(object):
