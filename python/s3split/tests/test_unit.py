@@ -10,6 +10,7 @@ LOGGER = s3split.common.get_logger()
 
 @pytest.mark.s3
 def test_s3_uri():
+    "parse valid s3 string"
     s3_uri = s3split.s3util.S3Uri("s3://aaa/bbb")
     test = s3_uri.bucket == "aaa" and s3_uri.object == "bbb"
     assert test
@@ -17,13 +18,13 @@ def test_s3_uri():
 
 @pytest.mark.s3
 def test_s3_uri_missing_path():
+    "test s3 uri without path"
     with pytest.raises(SystemExit, match=r'S3 URI must contains bucket and path s3://bucket/path'):
         assert s3split.s3util.S3Uri("s3://aaa")
 
 @pytest.mark.s3
 def test_s3_list_bucket():
-    "full s3 operation"
-    # stats = s3split.actions.Stats(1)
+    "list bucket"
     s3_manager = s3split.s3util.S3Manager(common.MINIO_ACCESS_KEY, common.MINIO_SECRET_KEY, common.MINIO_ENDPOINT,
                                           common.MINIO_VERIFY_SSL, common.MINIO_BUCKET, common.MINIO_PATH)
     # s3_manager.bucket_exsist()

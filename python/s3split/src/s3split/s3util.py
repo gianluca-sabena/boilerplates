@@ -3,13 +3,13 @@ import os
 import threading
 import json
 import re
+from urllib.parse import urlparse
+import urllib3
 import boto3
 import boto3.session
 import botocore
 from botocore.exceptions import ClientError
 from boto3.s3.transfer import TransferConfig
-import urllib3
-from urllib.parse import urlparse
 import s3split.common
 
 # logger = s3split.common.get_logger()
@@ -67,13 +67,10 @@ class S3Manager():
         self._s3_client = None
         # create client from session (thread safe)
         try:
-            # TODO: detect ssl from endpoint true if start with https:
-            # TODO: pass verify form command line argument
             url = urlparse(s3_endpoint)
             self._s3_use_ssl = False
             if url.scheme == "https":
                 self._s3_use_ssl = True
-
             self._s3_client = self._session.client('s3', aws_access_key_id=s3_access_key, aws_secret_access_key=s3_secret_key,
                                                    endpoint_url=s3_endpoint, use_ssl=self._s3_use_ssl, verify=s3_verify_ssl,
                                                    config=botocore.config.Config(max_pool_connections=25))

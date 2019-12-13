@@ -10,6 +10,7 @@ import common
 
 LOGGER = s3split.common.get_logger()
 
+
 @pytest.mark.args
 def test_minio_invalid_s3uri(docker_minio_fixture):
     """test minio connection error"""
@@ -49,12 +50,12 @@ def test_minio_upload(docker_minio_fixture):
     size = 1024
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
     common.generate_random_files(full_path, n_files, size)
-    s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY, "--s3-endpoint", common.MINIO_ENDPOINT,
-                           "--threads", "2", "--stats-interval", "1", "upload", full_path, f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}",
-                           "--tar-size", "10"])
-    s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY, "--s3-endpoint", common.MINIO_ENDPOINT,
+    s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
+                           "--s3-endpoint", common.MINIO_ENDPOINT, "--threads", "2", "--stats-interval", "1",
+                           "upload", full_path, f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}", "--tar-size", "10"])
+    s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
+                           "--s3-endpoint", common.MINIO_ENDPOINT,
                            "check", full_path, f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}"])
-    
 
     # download metadata
     # stats = s3split.s3util.Stats(1)
@@ -78,8 +79,3 @@ def test_minio_upload(docker_minio_fixture):
     #     elif s3_data.get(key) != val:
     #         LOGGER.error((f"Check size for split part {key} failed! "
     #                        "Expected size: {val} comparade to s3 object size: {s3_data.get('key')} "))
-
-
-
-
-

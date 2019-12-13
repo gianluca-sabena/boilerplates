@@ -88,7 +88,7 @@ class Action():
         elif args.action == "download":
             self._s3uri = s3split.s3util.S3Uri(self._args.source)
             self._fsuri = None
-        
+
         self._s3_manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
                                                     self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
         # check S3 connection with dedicate method
