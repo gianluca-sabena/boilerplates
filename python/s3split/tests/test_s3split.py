@@ -7,6 +7,7 @@ import docker
 import s3split.common
 import s3split.main
 import s3split.s3util
+import common
 
 DOCKER_MINIO_IMAGE = "minio/minio:RELEASE.2019-10-12T01-39-57Z"
 MINIO_ACCESS_KEY = "test_access"
@@ -38,32 +39,29 @@ def docker_minio_fixture():
     return True
 
 
-def generate_random_files(full_path, n_files, size):
-    """path, n_files, number of files file size in kb"""
-    if not os.path.isdir(full_path):
-        try:
-            os.makedirs(full_path)
-        except OSError as ex:
-            LOGGER.error(f"Creation of the directory {full_path} failed - {ex}")
-        else:
-            LOGGER.info(f"Successfully created the directory {full_path}")
-    for i in range(n_files):
-        with open(os.path.join(full_path, f"file_{i+1}.txt"), 'wb') as fout:
-            fout.write(os.urandom(size * 1024))
+
+
+
+@pytest.mark.args
+def test_minio_invalid_s3uri(docker_minio_fixture):
+    """test minio connection error"""
+    with pytest.raises(SystemExit, match=r'S3 URI must contains bucket and path s3://bucket/path'):
+        assert s3split.main.run_main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "upload", "/tmp", "s3://aaa"])
 
 
 @pytest.mark.args
 def test_argparse_invalid_local_path(docker_minio_fixture):
     """test that exception is raised for invalid local path"""
     with pytest.raises(ValueError, match=r"source: 'D' is not a directory"):
-        assert s3split.main.run_main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "upload", "D", "s3://E"])
+        assert s3split.main.run_main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "upload", "D", "s3://aaa/bbb"])
 
 
 @pytest.mark.args
 def test_minio_invalid_endpoint(docker_minio_fixture):
     """test minio connection error"""
     with pytest.raises(ValueError, match=r"S3 ValueError: Invalid endpoint: C"):
-        assert s3split.main.run_main(["--s3-secret-key", "A", "--s3-access-key", "B", "--s3-endpoint", "C", "upload", "/tmp", "s3://E"])
+        assert s3split.main.run_main(["--s3-secret-key", "A", "--s3-access-key", "B",
+                                      "--s3-endpoint", "C", "upload", "/tmp", "s3://aaa/bbb"])
 
 
 @pytest.mark.args
@@ -71,10 +69,10 @@ def test_minio_invalid_bucket(docker_minio_fixture):
     n_files = 100
     size = 1024
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
-    generate_random_files(full_path, n_files, size)
-    with pytest.raises(SystemExit, match=r'Fatal boto3 exception: An error occurred \(InvalidBucketName\).*'):
+    common.generate_random_files(full_path, n_files, size)
+    with pytest.raises(SystemExit, match=r'S3 URI must contains bucket and path s3://bucket/path'):
         assert s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY,
-                                      "--s3-endpoint", MINIO_ENDPOINT, "upload", full_path, "s3://D"])
+                                      "--s3-endpoint", MINIO_ENDPOINT, "upload", full_path, "s3://ddd/"])
 
 
 @pytest.mark.full
@@ -82,7 +80,7 @@ def test_minio_upload(docker_minio_fixture):
     n_files = 200
     size = 1024
     full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
-    generate_random_files(full_path, n_files, size)
+    common.generate_random_files(full_path, n_files, size)
     s3split.main.run_main(["--s3-secret-key", MINIO_SECRET_KEY, "--s3-access-key", MINIO_ACCESS_KEY, "--s3-endpoint", MINIO_ENDPOINT,
                            "--threads", "2", "--stats-interval", "1", "upload", full_path, f"s3://{MINIO_BUCKET}/{MINIO_PATH}",
                            "--tar-size", "10", "--recovery", "true"])
@@ -118,8 +116,22 @@ def test_s3_list_bucket():
     "full s3 operation"
     # stats = s3split.actions.Stats(1)
     s3_manager = s3split.s3util.S3Manager(MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_ENDPOINT,
-                                          MINIO_USE_SSL, MINIO_BUCKET, MINIO_PATH)
-    s3_manager.bucket_create()
-    s3_manager.bucket_create()
+                                          MINIO_USE_SSL, MINIO_BUCKET+'._!', MINIO_PATH+'._!')
+    s3_manager.bucket_exsist()
+    s3_manager.create_bucket()
     objects = s3_manager.list_bucket_objects()
     LOGGER.info(objects)
+
+
+@pytest.mark.last
+def test_s3_uri():
+    s3_uri = s3split.s3util.S3Uri("s3://aaa/bbb")
+    LOGGER.info(f"{s3_uri.bucket} {s3_uri.object}")
+    test = s3_uri.bucket == "aaa" and s3_uri.object == "bbb"
+    assert test
+
+
+@pytest.mark.last
+def test_s3_uri_missing_path():
+    with pytest.raises(SystemExit, match=r'S3 URI must contains bucket and path s3://bucket/path'):
+        assert s3split.s3util.S3Uri("s3://aaa")

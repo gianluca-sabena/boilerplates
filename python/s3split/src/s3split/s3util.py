@@ -28,9 +28,13 @@ class S3Uri():
         if not match:
             raise ValueError("%s: not a S3 URI" % string)
         groups = match.groups()
-        # if len(match.groups) == 0
         self.bucket = groups[0]
         self.object = groups[1]
+        if len(self.object) == 0:
+            raise SystemExit(f"S3 URI must contains bucket and path s3://bucket/path")
+        # if len(match.groups()) == 2:
+        # else:
+        #     self.object = "s3split"
 
 
 class ProgressPercentage(object):
@@ -84,7 +88,7 @@ class S3Manager():
         """return boto3 client"""
         return self._s3_client
 
-    def bucket_create(self):
+    def create_bucket(self):
         """create a bucket"""
         if self.bucket_exsist():
             return True
@@ -105,20 +109,19 @@ class S3Manager():
         try:
             self._s3_client.head_bucket(Bucket=self.s3_bucket)
             return True
-        # except ValueError as ex:
-        #     raise ValueError(f"S3 ValueError: {ex}")
+        except botocore.exceptions.ParamValidationError as ex:
+            self._wrap_exception(ex)
         except ClientError as ex:
             # If it was a 404 error, then the bucket does not exist.
             if ex.response['Error']['Code'] == '404':
                 return False
             self._wrap_exception(ex)
-            #raise ValueError(f"S3 ClientError: {ex}")
 
     def list_bucket_objects(self):
         """List the objects in an Amazon S3 bucket
 
         :param bucket_name: string
-        :return: List of bucket objects. If error, return None.
+        :return: List of bucket objects
         """
 
         # Retrieve the list of bucket objects
@@ -129,7 +132,6 @@ class S3Manager():
                 return response['Contents']
             return None
         except ClientError as ex:
-            # AllAccessDisabled error == bucket not found
             self._wrap_exception(ex)
 
     def upload_metadata(self, splits=None, tars=None):
@@ -138,12 +140,12 @@ class S3Manager():
             "info": {
                 "hostname": "",
                 "uname": "",
-                "env": ""
+                "id": ""
             },
             "tars": tars,
             "splits": splits}
         if not self.bucket_exsist():
-            self.bucket_create()
+            self.create_bucket()
         try:
             self._s3_client.put_object(Bucket=self.s3_bucket, Key=self.s3_path+'/s3split-metadata.json', Body=json.dumps(content))
             return True
