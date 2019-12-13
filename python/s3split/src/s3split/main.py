@@ -24,12 +24,15 @@ def parse_args(sys_args):
     parser.add_argument('--stats-interval', help='Seconds between two stats print', required=False, type=int, default=30)
     subparsers = parser.add_subparsers(dest='action')
     parser_upload = subparsers.add_parser("upload", help="upload -h")
-    parser_check = subparsers.add_parser("check", help="check -h")
     parser_upload.add_argument('source', help="Local filesystem directory")
     parser_upload.add_argument('target', help="S3 path in the form s3://bucket/path (path is required!)")
     parser_upload.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
+    parser_download = subparsers.add_parser("download", help="download -h")
+    parser_download.add_argument('source', help="S3 path in the form s3://bucket/path (path is required!)")
+    parser_download.add_argument('target', help="Local filesystem directory")
     # parser_upload.add_argument('--recovery', help='recovery upload if s3 bucket contains metadata file',
     #                            required=False, type=bool, default=False)
+    parser_check = subparsers.add_parser("check", help="check -h")
     #parser_check.add_argument('source', help="Local filesystem directory")
     parser_check.add_argument('target', help="S3 path in the form s3://bucket/...")
     return parser.parse_args(sys_args)
@@ -54,13 +57,18 @@ def run_main(sys_args):
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
-    logger.info(f"Action: {args.action} {args.source} {args.target}")
+    #logger.info(f"Action: {args.action} {args.source} {args.target}")
     logger.info(f"Parallel threads: {args.threads}")
     try:
         if args.action == "upload":
             action.upload()
         elif args.action == "check":
             action.check()
+        elif args.action == "download":
+            # if not action.check():
+            #     logger.error("s3 metadata file error can not download parts")
+            #     raise SystemExit()
+            action.download()
     except ValueError as ex:
         logger.error(f"ValueError: {ex}")
         raise ValueError(ex)

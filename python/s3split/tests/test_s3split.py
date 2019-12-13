@@ -57,6 +57,13 @@ def test_minio_upload(docker_minio_fixture):
                            "--s3-endpoint", common.MINIO_ENDPOINT,
                            "check", f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}"])
 
+# @pytest.mark.last
+# def test_minio_download(docker_minio_fixture):
+#     s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
+#                            "--s3-endpoint", common.MINIO_ENDPOINT,
+#                            "download", f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}", "/tmp/s3split-download"])
+
+
     # download metadata
     # stats = s3split.s3util.Stats(1)
     # s3_manager = s3split.s3util.S3Manager(common.MINIO_ACCESS_KEY, common.MINIO_SECRET_KEY, common.MINIO_ENDPOINT,

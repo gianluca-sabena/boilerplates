@@ -76,17 +76,18 @@ class Action():
         self._stats = Stats(args.stats_interval)
         self._executor = None
         # Validate
-        if self._args.source is not None and not os.path.isdir(self._args.source):
-            raise ValueError(f"source: '{self._args.source}' is not a directory")
+
         # Validate
         if args.action == "upload":
             self._s3uri = s3split.s3util.S3Uri(self._args.target)
             self._fsuri = self._args.source
+            if self._args.source is not None and not os.path.isdir(self._args.source):
+                raise ValueError(f"source: '{self._args.source}' is not a directory")
         elif args.action == "download":
             self._s3uri = s3split.s3util.S3Uri(self._args.source)
             self._fsuri = self._args.target
         elif args.action == "check":
-            self._s3uri = s3split.s3util.S3Uri(self._args.source)
+            self._s3uri = s3split.s3util.S3Uri(self._args.target)
             self._fsuri = None
 
         self._s3_manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
@@ -101,17 +102,22 @@ class Action():
             self._executor.shutdown()
         return True
 
+    def download(self):
+        "download files from s3"
+        metadata = self._s3_manager.download_metadata()
+
+
     def check(self):
         """download splits to s3"""
-        objects = self._s3_manager.list_bucket_objects()
         metadata = self._s3_manager.download_metadata()
-        tar_data = {tar['name']: tar['size'] for tar in metadata["tars"]}
+        tar_metadata = {tar['name']: tar['size'] for tar in metadata["tars"]}
+        objects = self._s3_manager.list_bucket_objects()
         s3_data = {obj['Key']: obj['Size'] for obj in objects}
         errors = False
         if len(metadata["splits"]) != len(metadata["tars"]):
             self._logger.error("Number of slplits and tar files is different! Incomplete upload!")
             errors = True
-        for key, val in tar_data.items():
+        for key, val in tar_metadata.items():
             if s3_data.get(key) is None:
                 self._logger.error(f"Split part {key} not found on S3! Inclomplete uploads detected!")
                 errors = True

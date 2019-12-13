@@ -38,7 +38,7 @@ def test_s3_list_bucket():
     objects = s3_manager.list_bucket_objects()
     LOGGER.info(pformat(objects))
 
-@pytest.mark.last
+@pytest.mark.s3
 def test_s3_get_metadata():
     "full s3 operation"
     s3_manager = s3split.s3util.S3Manager(common.MINIO_ACCESS_KEY, common.MINIO_SECRET_KEY, common.MINIO_ENDPOINT,
