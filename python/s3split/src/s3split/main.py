@@ -63,7 +63,8 @@ def run_main(sys_args):
         if args.action == "upload":
             action.upload()
         elif args.action == "check":
-            action.check()
+            if not action.check():
+                raise SystemExit("Check not passed!")
         elif args.action == "download":
             # if not action.check():
             #     logger.error("s3 metadata file error can not download parts")

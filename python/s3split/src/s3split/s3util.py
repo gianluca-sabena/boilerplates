@@ -39,10 +39,10 @@ class ProgressPercentage(object):
     """progress upload callback from boto3"""
     files = dict()
 
-    def __init__(self, cb_stats_update, filename):
+    def __init__(self, cb_stats_update, filename, size):
         self._filename = filename
         self._cb_stats_update = cb_stats_update
-        self._size = float(os.path.getsize(filename))
+        self._size = float(size)
         self._seen_so_far = 0
         self._lock = threading.Lock()
 
@@ -51,7 +51,7 @@ class ProgressPercentage(object):
         with self._lock:
             self._seen_so_far += bytes_amount
             if callable(self._cb_stats_update):
-                self._cb_stats_update(self._filename, bytes_amount)
+                self._cb_stats_update(self._filename, bytes_amount, self._size)
 
 
 class S3Manager():
@@ -83,7 +83,6 @@ class S3Manager():
         "exit when detect a fatal client exception"
         self._logger.error(f"Boto3 client exception: {ex}")
         raise SystemExit(f"Fatal boto3 exception: {ex}")
-
 
     def get_client(self):
         """return boto3 client"""
@@ -163,12 +162,26 @@ class S3Manager():
         except ClientError as ex:
             self._wrap_exception(ex)
 
+    def download_file(self, s3_object, s3_size, fs_path):
+        """download object from s3"""
+        self._logger.info(f"Start download of {s3_object}")
+        full_path = os.path.join(self.s3_path, s3_object)
+        progress = ProgressPercentage(self._cb_stats_update, full_path, s3_size)
+        config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
+                                multipart_chunksize=1024 * 1024 * 64, use_threads=True)
+        with open(fs_path, 'wb') as file:
+            try:
+                self._s3_client.download_fileobj(self.s3_bucket, full_path, file, Config=config, Callback=progress)
+                return full_path
+            except ClientError as ex:
+                self._wrap_exception(ex)
+
     def upload_file(self, fs_path):
         """upload a single file with multiple parallel (concurrency) worlkers"""
         config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
                                 multipart_chunksize=1024 * 1024 * 64, use_threads=True)
         final_path = self.s3_path+'/'+os.path.basename(fs_path)
-        progress = ProgressPercentage(self._cb_stats_update, fs_path)
+        progress = ProgressPercentage(self._cb_stats_update, fs_path, os.path.getsize(fs_path))
         try:
             self._s3_client.upload_file(fs_path, self.s3_bucket, final_path,
                                         Config=config,

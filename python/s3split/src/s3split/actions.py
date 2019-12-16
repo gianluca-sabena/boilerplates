@@ -23,9 +23,9 @@ class Stats():
         self._time_print_stat = time.time()
         self._lock = threading.Lock()
 
-    def _add(self, file):
-        with self._lock:
-            self._stats[file] = {'size': float(os.path.getsize(file)), 'transferred': 0, 'completed': False}
+    # def _add(self, file):
+    #     with self._lock:
+    #         self._stats[file] = {'size': float(os.path.getsize(file)), 'transferred': 0, 'completed': False}
 
     def print(self):
         """print stats with logger"""
@@ -50,12 +50,12 @@ class Stats():
             txt += f"\nUpload(s) in progress:\n{msg}"
         self._logger.info(txt)
 
-    def update(self, file, byte):
+    def update(self, file, byte, total_size):
         """update byte sent for a file"""
         with self._lock:
             # add new file
             if self._stats.get(file) is None:
-                self._stats[file] = {'size': float(os.path.getsize(file)), 'transferred': 0, 'completed': False}
+                self._stats[file] = {'size': total_size, 'transferred': 0, 'completed': False}
             self._stats[file]['transferred'] += byte
             self._byte_sent += byte
             if self._stats[file]['transferred'] == self._stats[file]['size']:
@@ -80,11 +80,13 @@ class Action():
         # Validate
         if args.action == "upload":
             self._s3uri = s3split.s3util.S3Uri(self._args.target)
+            if not os.path.isdir(self._args.source):
+                raise ValueError(f"upload source: '{self._args.source}' is not a directory")
             self._fsuri = self._args.source
-            if self._args.source is not None and not os.path.isdir(self._args.source):
-                raise ValueError(f"source: '{self._args.source}' is not a directory")
         elif args.action == "download":
             self._s3uri = s3split.s3util.S3Uri(self._args.source)
+            if os.path.isdir(self._args.target):
+                raise ValueError(f"download target directory '{self._args.target}' exsists... Please provide a new path!")
             self._fsuri = self._args.target
         elif args.action == "check":
             self._s3uri = s3split.s3util.S3Uri(self._args.target)
@@ -104,7 +106,43 @@ class Action():
 
     def download(self):
         "download files from s3"
+        def downloader(s3manager, s3_obj, s3_size):
+            self._logger.info(f"Start download in a thread for file: {s3_obj}")
+            return s3manager.download_file(s3_obj, s3_size, os.path.join(self._fsuri, s3_obj))
+
         metadata = self._s3_manager.download_metadata()
+        # from pprint import pformat
+        # self._logger.info(pformat(metadata))
+        if not os.path.isdir(self._fsuri):
+            try:
+                os.makedirs(self._fsuri)
+            except OSError as ex:
+                raise SystemExit(f"Creation of the directory {self._fsuri} failed - {ex}")
+            else:
+                self._logger.info(f"Successfully created download directory {self._fsuri}")
+        futures = {}
+        downloaded = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
+            for s3_obj in metadata["tars"]:
+                self._logger.info(f"Downloading {s3_obj['name']}")
+                s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
+                                                    self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
+                future = executor.submit(downloader, s3manager, s3_obj['name'], s3_obj['size'])
+                futures.update({future: s3_obj['name']})
+            self._logger.debug(f"List of futures: {futures}")
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    data = future.result()
+                    downloaded.append(data)
+                except Exception as exc:  # pylint: disable=broad-except
+                    self._logger.error(f"Thread generated an exception: {exc}")
+                    traceback_str = traceback.format_exc(exc)
+                    self._logger.error(f"Thread generated an exception: {traceback_str}")
+                else:
+                    self._logger.info(f"Download completed {data}")
+        self._stats.print()
+
+
 
 
     def check(self):
@@ -118,6 +156,7 @@ class Action():
             self._logger.error("Number of slplits and tar files is different! Incomplete upload!")
             errors = True
         for key, val in tar_metadata.items():
+            key = os.path.join(self._s3uri.object, key)
             if s3_data.get(key) is None:
                 self._logger.error(f"Split part {key} not found on S3! Inclomplete uploads detected!")
                 errors = True
@@ -161,13 +200,12 @@ class Action():
                     data = future.result()
                     tars_uploaded.append(data)
                 except Exception as exc:  # pylint: disable=broad-except
-                    self._logger.error(f"generated an exception: {exc}")
+                    self._logger.error(f"Thread generated an exception: {exc}")
                     traceback_str = traceback.format_exc(exc)
-                    self._logger.error(f"generated an exception: {traceback_str}")
+                    self._logger.error(f"Thread generated an exception: {traceback_str}")
                 else:
                     self._logger.info(f"Split: {data['id']} Completed task processing")
         self._logger.debug(f"Tars uploaded completed - tars: {tars_uploaded}")
         if not self._s3_manager.upload_metadata(splits, tars_uploaded):
-            self._logger.error("Metadata json file upload failed!")
-            raise SystemExit
+            raise SystemExit("Metadata json file upload failed!")
         self._stats.print()

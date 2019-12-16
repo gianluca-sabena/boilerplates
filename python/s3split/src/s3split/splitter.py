@@ -14,17 +14,18 @@ class Splitter():
             self._logger.debug(f"Split: {split.get('id')} - Create Splitter class for split: {split}")
             self._s3manager = s3manager
             self._event = event
-            # self._args = args
             self._fs_path = fs_path
             self._s3_bucket = s3manager.s3_bucket
             self._s3_path = s3manager.s3_path
             self.split = split
-            # self.bucket = args.s3_bucket
             self.name_tar = f"s3split-part-{self.split.get('id')}.tar"
         else:
-            self._logger.debug(f"Split: {split.get('id')} - Create Splitter class skipped because terminating event is set")
+            self._logger.warning(f"Split: {split.get('id')} - Create Splitter class skipped because Ctrl + C was pressed!")
 
-    def _tar(self):
+
+    def run(self):
+        """create a tar and upload"""
+        self._logger.debug(f"Split: {self.split.get('id')} - Start processing")
         # Filter function to update tar path, required to untar in a safe location
         def tar_filter(tobj):
             new = tobj.name.replace(self._fs_path.strip('/'), self._s3_path.strip('/'))
@@ -42,19 +43,10 @@ class Splitter():
                     # Start upload
                     if not self._event.is_set():
                         self._s3manager.upload_file(tar_file)
-                        return {"name": os.path.join(self._s3_path, os.path.basename(tar_file)),
+                        return {"name": os.path.basename(tar_file),
                                 "id": self.split.get('id'), "size": os.path.getsize(tar_file)}
-                    self._logger.info(f"Split: {self.split.get('id')} - Upload interrupted because terminating event is set!")
+                    self._logger.warning(f"Split: {self.split.get('id')} - Upload interrupted because Ctrl + C was pressed!")
                     return None
         else:
-            self._logger.info(f"Split: {self.split.get('id')} - Tar interrupted because terminating event is set!")
-            return None
-
-    def run(self):
-        """create a tar and upload"""
-        self._logger.debug(f"Split: {self.split.get('id')} - Start processing")
-        if not self._event.is_set():
-            return self._tar()
-        else:
-            self._logger.info(f"Split: {self.split.get('id')} - processing interrupted because terminating event is set!")
+            self._logger.warning(f"Split: {self.split.get('id')} - Tar interrupted because Ctrl + C was pressed!")
             return None
