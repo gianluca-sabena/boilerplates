@@ -162,19 +162,18 @@ class S3Manager():
         except ClientError as ex:
             self._wrap_exception(ex)
 
-    def download_file(self, s3_object, s3_size, fs_path):
+    def download_file(self, s3_object, s3_size, file):
         """download object from s3"""
         self._logger.info(f"Start download of {s3_object}")
         full_path = os.path.join(self.s3_path, s3_object)
         progress = ProgressPercentage(self._cb_stats_update, full_path, s3_size)
         config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,
                                 multipart_chunksize=1024 * 1024 * 64, use_threads=True)
-        with open(fs_path, 'wb') as file:
-            try:
-                self._s3_client.download_fileobj(self.s3_bucket, full_path, file, Config=config, Callback=progress)
-                return full_path
-            except ClientError as ex:
-                self._wrap_exception(ex)
+        try:
+            self._s3_client.download_fileobj(self.s3_bucket, full_path, file, Config=config, Callback=progress)
+            return full_path
+        except ClientError as ex:
+            self._wrap_exception(ex)
 
     def upload_file(self, fs_path):
         """upload a single file with multiple parallel (concurrency) worlkers"""

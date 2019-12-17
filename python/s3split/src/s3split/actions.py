@@ -9,6 +9,7 @@ import s3split.s3util
 import s3split.common
 import s3split.splitter
 
+
 class Stats():
     """Global stats ovject, updated from different working threads"""
 
@@ -106,9 +107,12 @@ class Action():
 
     def download(self):
         "download files from s3"
-        def downloader(s3manager, s3_obj, s3_size):
+        def downloader(s3_obj, s3_size):
             self._logger.info(f"Start download in a thread for file: {s3_obj}")
-            return s3manager.download_file(s3_obj, s3_size, os.path.join(self._fsuri, s3_obj))
+            s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
+                                                 self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
+            with open(os.path.join(self._fsuri, s3_obj), 'wb') as file:
+                return s3manager.download_file(s3_obj, s3_size, file)
 
         metadata = self._s3_manager.download_metadata()
         # from pprint import pformat
@@ -125,9 +129,7 @@ class Action():
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
             for s3_obj in metadata["tars"]:
                 self._logger.info(f"Downloading {s3_obj['name']}")
-                s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                                                    self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
-                future = executor.submit(downloader, s3manager, s3_obj['name'], s3_obj['size'])
+                future = executor.submit(downloader, s3_obj['name'], s3_obj['size'])
                 futures.update({future: s3_obj['name']})
             self._logger.debug(f"List of futures: {futures}")
             for future in concurrent.futures.as_completed(futures):
@@ -141,9 +143,6 @@ class Action():
                 else:
                     self._logger.info(f"Download completed {data}")
         self._stats.print()
-
-
-
 
     def check(self):
         """download splits to s3"""
