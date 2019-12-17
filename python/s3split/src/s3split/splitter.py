@@ -28,7 +28,8 @@ class Splitter():
         self._logger.debug(f"Split: {self.split.get('id')} - Start processing")
         # Filter function to update tar path, required to untar in a safe location
         def tar_filter(tobj):
-            new = tobj.name.replace(self._fs_path.strip('/'), self._s3_path.strip('/'))
+            # new = tobj.name.replace(self._fs_path.strip('/'), self._s3_path.strip('/'))
+            new = tobj.name.replace(self._fs_path.strip('/'), 's3split').strip('/')
             tobj.name = new
             return tobj
         if not self._event.is_set():

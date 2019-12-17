@@ -4,7 +4,8 @@ import time
 import threading
 import traceback
 import concurrent.futures
-
+import tarfile
+import tempfile
 import s3split.s3util
 import s3split.common
 import s3split.splitter
@@ -107,12 +108,19 @@ class Action():
 
     def download(self):
         "download files from s3"
-        def downloader(s3_obj, s3_size):
-            self._logger.info(f"Start download in a thread for file: {s3_obj}")
+        def downloader(tmpdir, s3_obj, s3_size):
             s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
                                                  self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
-            with open(os.path.join(self._fsuri, s3_obj), 'wb') as file:
-                return s3manager.download_file(s3_obj, s3_size, file)
+            tar_file = os.path.join(tmpdir, os.path.basename(s3_obj))
+            self._logger.info(f"Start download in a thread for s3 object '{s3_obj}' to file '{tar_file}'")
+            with open(tar_file, 'wb') as file:
+                # self._fsuri
+                s3_obj = s3manager.download_file(s3_obj, s3_size, file)
+                file.close()
+            tar = tarfile.open(tar_file)
+            tar.extractall(path=self._fsuri)
+            tar.close()
+            return s3_obj
 
         metadata = self._s3_manager.download_metadata()
         # from pprint import pformat
@@ -126,22 +134,23 @@ class Action():
                 self._logger.info(f"Successfully created download directory {self._fsuri}")
         futures = {}
         downloaded = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
-            for s3_obj in metadata["tars"]:
-                self._logger.info(f"Downloading {s3_obj['name']}")
-                future = executor.submit(downloader, s3_obj['name'], s3_obj['size'])
-                futures.update({future: s3_obj['name']})
-            self._logger.debug(f"List of futures: {futures}")
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    data = future.result()
-                    downloaded.append(data)
-                except Exception as exc:  # pylint: disable=broad-except
-                    self._logger.error(f"Thread generated an exception: {exc}")
-                    traceback_str = traceback.format_exc(exc)
-                    self._logger.error(f"Thread generated an exception: {traceback_str}")
-                else:
-                    self._logger.info(f"Download completed {data}")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
+                for s3_obj in metadata["tars"]:
+                    self._logger.info(f"Downloading {s3_obj['name']}")
+                    future = executor.submit(downloader, tmpdir, s3_obj['name'], s3_obj['size'])
+                    futures.update({future: s3_obj['name']})
+                self._logger.debug(f"List of futures: {futures}")
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        data = future.result()
+                        downloaded.append(data)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        self._logger.error(f"Thread generated an exception: {exc}")
+                        traceback_str = traceback.format_exc(exc)
+                        self._logger.error(f"Thread generated an exception: {traceback_str}")
+                    else:
+                        self._logger.info(f"Download completed {data}")
         self._stats.print()
 
     def check(self):
