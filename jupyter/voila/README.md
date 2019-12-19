@@ -5,7 +5,7 @@ Voila <https://voila.readthedocs.io/> transforms a notebook in a standalone web 
 Requirements:
 
 - Jupyter notebook (jupyter lab is not supported at the moment)
-- Jupyter widgets <
+- Jupyter widgets <https://ipywidgets.readthedocs.io/>
 - Matplotlib jupyter <https://github.com/matplotlib/jupyter-matplotlib#installation>
 
 ## Run
