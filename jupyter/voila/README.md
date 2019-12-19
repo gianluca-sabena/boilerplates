@@ -1,0 +1,21 @@
+# Voila
+
+Voila <https://voila.readthedocs.io/> transforms a notebook in a standalone web application
+
+Requirements:
+
+- Jupyter notebook (jupyter lab is not supported at the moment)
+- Jupyter widgets <
+- Matplotlib jupyter <https://github.com/matplotlib/jupyter-matplotlib#installation>
+
+## Run
+
+- Install everything with `pipenv install`
+- Run notebook `pipenv run jupyter notebook`
+- Convert notebooks to standalone apps `pipenv run voila`
+
+## Image mouse click
+
+Works with matlib and widget
+
+- Events handling <https://matplotlib.org/3.1.1/users/event_handling.html>
