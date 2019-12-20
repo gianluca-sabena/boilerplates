@@ -141,6 +141,7 @@ class Action():
                 metadata = self._s3_manager.download_metadata()
                 # from pprint import pformat
                 # self._logger.info(pformat(metadata))
+                # TODO: probably it is safer to scan split ids, if one is missing we know the dataset is incoplete...
                 for s3_obj in metadata["tars"]:
                     self._logger.info(f"Downloading {s3_obj['name']}")
                     future = executor.submit(_downloader, tmpdir, s3_obj['name'], s3_obj['size'])
@@ -187,17 +188,17 @@ class Action():
         """upload splits to s3"""
         def _run_upload(split):
             """create a tar and upload"""
-            self._logger.debug(f"Split: {split.get('id')} - Start processing")
-            s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                                                    self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
-            name_tar = f"s3split-part-{split.get('id')}.tar"
-            # Filter function to update tar path, required to untar in a safe location
-
             def tar_filter(tobj):
                 # Add a container path if someone open the archive on a desktop
                 new = tobj.name.replace(self._args.source.strip('/'), 's3split').strip('/')
                 tobj.name = new
                 return tobj
+
+            self._logger.debug(f"Split: {split.get('id')} - Start processing")
+            s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
+                                                self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
+            name_tar = f"s3split-part-{split.get('id')}.tar"
+            # Filter function to update tar path, required to untar in a safe location
             if not self._event.is_set():
                 self._logger.debug(f"Split: {split.get('id')} - Start create tar {name_tar}")
                 with tempfile.TemporaryDirectory() as tmpdir:
