@@ -7,7 +7,6 @@ import signal
 # This is the main file, only absolute path import are allowed here!!!
 import s3split.s3util
 import s3split.common
-import s3split.splitter
 import s3split.actions
 
 

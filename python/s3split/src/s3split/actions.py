@@ -8,7 +8,7 @@ import tarfile
 import tempfile
 import s3split.s3util
 import s3split.common
-import s3split.splitter
+
 
 
 class Stats():
@@ -108,7 +108,12 @@ class Action():
 
     def download(self):
         "download files from s3"
-        def downloader(tmpdir, s3_obj, s3_size):
+        def _downloader(tmpdir, s3_obj, s3_size):
+            def py_files(members):
+                for tarinfo in members:
+                    # Remove container path added if someone open the archive on a desktop
+                    tarinfo.name = tarinfo.name.replace('s3split', '').strip('/')
+                    yield tarinfo
             s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
                                                  self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
             tar_file = os.path.join(tmpdir, os.path.basename(s3_obj))
@@ -118,13 +123,10 @@ class Action():
                 s3_obj = s3manager.download_file(s3_obj, s3_size, file)
                 file.close()
             tar = tarfile.open(tar_file)
-            tar.extractall(path=self._fsuri)
+            tar.extractall(path=self._fsuri, members=py_files(tar))
             tar.close()
             return s3_obj
 
-        metadata = self._s3_manager.download_metadata()
-        # from pprint import pformat
-        # self._logger.info(pformat(metadata))
         if not os.path.isdir(self._fsuri):
             try:
                 os.makedirs(self._fsuri)
@@ -136,9 +138,12 @@ class Action():
         downloaded = []
         with tempfile.TemporaryDirectory() as tmpdir:
             with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
+                metadata = self._s3_manager.download_metadata()
+                # from pprint import pformat
+                # self._logger.info(pformat(metadata))
                 for s3_obj in metadata["tars"]:
                     self._logger.info(f"Downloading {s3_obj['name']}")
-                    future = executor.submit(downloader, tmpdir, s3_obj['name'], s3_obj['size'])
+                    future = executor.submit(_downloader, tmpdir, s3_obj['name'], s3_obj['size'])
                     futures.update({future: s3_obj['name']})
                 self._logger.debug(f"List of futures: {futures}")
                 for future in concurrent.futures.as_completed(futures):
@@ -176,8 +181,43 @@ class Action():
                 errors = True
         return not errors
 
+
+
     def upload(self):
         """upload splits to s3"""
+        def _run_upload(split):
+            """create a tar and upload"""
+            self._logger.debug(f"Split: {split.get('id')} - Start processing")
+            s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
+                                                    self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
+            name_tar = f"s3split-part-{split.get('id')}.tar"
+            # Filter function to update tar path, required to untar in a safe location
+
+            def tar_filter(tobj):
+                # Add a container path if someone open the archive on a desktop
+                new = tobj.name.replace(self._args.source.strip('/'), 's3split').strip('/')
+                tobj.name = new
+                return tobj
+            if not self._event.is_set():
+                self._logger.debug(f"Split: {split.get('id')} - Start create tar {name_tar}")
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    tar_file = os.path.join(tmpdir, name_tar)
+                    with tarfile.open(tar_file, "w") as tar:
+                        for path in split.get('paths'):
+                            # remove base path from folder with filter function
+                            tar.add(path, filter=tar_filter)
+                        tar.close()
+                        self._logger.debug(f"Split: {split.get('id')} - Generated tar file {tar_file}")
+                    # Start upload
+                    if not self._event.is_set():
+                        s3manager.upload_file(tar_file)
+                        return {"name": os.path.basename(tar_file),
+                                "id": split.get('id'), "size": os.path.getsize(tar_file)}
+                    self._logger.warning(f"Split: {split.get('id')} - Upload interrupted because Ctrl + C was pressed!")
+                    return None
+            else:
+                self._logger.warning(f"Split: {split.get('id')} - Tar interrupted because Ctrl + C was pressed!")
+                return None
         self._logger.info(f"Tar object max size: {self._args.tar_size} MB")
         self._logger.info(f"Upload started! Print stats evry: {self._args.stats_interval} seconds")
         # Check if bucket is empty and if a metadata file is present
@@ -197,10 +237,10 @@ class Action():
             raise SystemExit
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
             for split in splits:
-                s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                                                     self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
-                splitter = s3split.splitter.Splitter(self._event, s3manager, self._args.source, split)
-                future = executor.submit(splitter.run)
+                # s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
+                #                                      self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
+                #splitter = s3split.splitter.Splitter(self._event, s3manager, self._args.source, split)
+                future = executor.submit(_run_upload, split)
                 future_split.update({future: split.get('id')})
             self._logger.debug(f"List of futures: {future_split}")
             for future in concurrent.futures.as_completed(future_split):
