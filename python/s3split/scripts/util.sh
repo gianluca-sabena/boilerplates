@@ -14,6 +14,7 @@ declare CURRENT_PATH
 CURRENT_PATH=$(pwd)
 declare APP_NAME="s3split"
 MINIO_SERVER_DATA="/tmp/minio-server/data"
+MINIO_ENDPOINT="http://127.0.0.1:9000"
 MINIO_ACCESS_KEY="test_access"
 MINIO_SECRET_KEY="test_secret"
 PATH_TEST_FILES="/tmp/s3cmd-test-files"
@@ -26,13 +27,15 @@ function parseCli() {
       echo ""
       echo "  command:"
       echo "    - create-pipenv-dev"
+      echo "    - test-pip-install"
       echo "    - run-python"
       echo "    - run-cli"
       echo "    - run-test"
-      echo "    - test-pip-install"
       echo ""
-      echo "    - minio-server               start minio server "
+      echo "    - start-minio-server               start minio server "
       echo ""
+      echo "    - generate-data"
+      echo "    - test-s3split-local-minio-1gb-upload"
       exit 0
   fi
   while [[ "$#" -gt 0 ]]; do
@@ -89,7 +92,7 @@ function parseCli() {
       cd "${SCRIPT_PATH}/../"
       pipenv run pytest -v
     ;;
-    minio-server)
+    start-minio-server)
       # echo "Key: ${KEY} - Value: ${VALUE}"
       # echo "Script dir is: ${SCRIPT_PATH}"
       echo "Start minio server... data path: ${MINIO_SERVER_DATA} - access_key: ${MINIO_ACCESS_KEY} - secret key: ${MINIO_SECRET_KEY} "
@@ -103,40 +106,33 @@ function parseCli() {
       local NUM_FILES=128
       local NUM_FOLDERS=40
       local TOTAL=$(( SIZE * NUM_FILES * NUM_FOLDERS))
-      #local PATH_BASE="${PATH_TEST_FILES}/${NUM_FOLDERS}d-${NUM_FILES}f-${SIZE}kb"
-      local PATH_BASE="${PATH_TEST_FILES}/random"
-      mkdir -p "${PATH_BASE}"
-      local counter=1
-      while [[ $counter -le $NUM_FOLDERS ]]; do
-        genfilesrandom ${PATH_BASE}/dir_${counter} ${SIZE} ${NUM_FILES}
-        ((counter += 1))
-      done
-      # To do generate 8 files * 128 Mb = 1 GB
-      local SIZE=$(( 1024 * 128 ))
-      genfilesrandom ${PATH_BASE} ${SIZE} 8
-      local TOTAL; TOTAL=$(du -sh ${PATH_BASE})
-      echo "Generated total KB: ${TOTAL}"
+      if [[ ! -d "${PATH_TEST_FILES}" ]]; then
+        mkdir -p "${PATH_TEST_FILES}"
+        local counter=1
+        while [[ $counter -le $NUM_FOLDERS ]]; do
+          genfilesrandom ${PATH_TEST_FILES}/dir_${counter} ${SIZE} ${NUM_FILES}
+          ((counter += 1))
+        done
+        # To do generate 8 files * 128 Mb = 1 GB
+        local SIZE=$(( 1024 * 128 ))
+        genfilesrandom ${PATH_TEST_FILES} ${SIZE} 8
+        local TOTAL; TOTAL=$(du -sh ${PATH_TEST_FILES})
+        echo "Generated total KB: ${TOTAL}"
+      else
+        echo "Random data already present in ${PATH_TEST_FILES}"
+      fi
 
     ;;
-    test-s3split-local-minio)
-      local PATH_PREFIX="random"
-      #echo "Run s3split with local minio"
-      python "${SCRIPT_PATH}/../src/s3split/main.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --s3-path "${PATH_PREFIX}" --fs-path "${PATH_TEST_FILES}/${PATH_PREFIX}"
-    ;;
-    test-s3split-fail)
-      local PATH_PREFIX="random"
-      #echo "Run s3split with local minio"
-      python "${SCRIPT_PATH}/../src/s3split/main.py" --s3-secret-key A --s3-access-key B --s3-endpoint C --s3-bucket D --s3-path E --fs-path /tmp upload
-    ;;
-    test-s3split-local-minio-1gb-files)
+    test-s3split-local-minio-upload)
       echo "Run s3split with local minio"
-      python "${SCRIPT_PATH}/../src/s3split/main.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint http://127.0.0.1:9000 --s3-bucket s3split-benchmarks --fs-path "${BENCHMARK_FILES_1GB_PATH}" 
+      "./${0}" generate-data
+      python "${SCRIPT_PATH}/../src/s3split/main.py" --s3-secret-key ${MINIO_SECRET_KEY} --s3-access-key ${MINIO_ACCESS_KEY} --s3-endpoint ${MINIO_ENDPOINT} --threads 4 upload "${PATH_TEST_FILES}" "s3://s3split/cli-test-1" --tar-size 500
     ;;
-    test-s3split-remote-minio-1gb-files)
+    test-s3split-remote-minio-upload)
       echo "Run s3split with remote minio"
       # shellcheck disable=SC1091,SC1090
       source "${HOME}/.s3split"
-      python "${SCRIPT_PATH}/../src/s3split/main.py" --s3-secret-key "${S3_SECRET_KEY}" --s3-access-key "${S3_ACCESS_KEY}" --s3-endpoint "${S3_ENDPOINT}" --s3-use-ssl True --s3-bucket "${S3_BUCKET}" --fs-path "${BENCHMARK_FILES_1GB_PATH}"
+      python "${SCRIPT_PATH}/../src/s3split/main.py" --s3-secret-key "${S3_SECRET_KEY}" --s3-access-key "${S3_ACCESS_KEY}" --s3-endpoint "${S3_ENDPOINT}" --s3-verify-ssl True --threads 2 upload "${PATH_TEST_FILES}" "${S3_BUCKET}" --tar-size 500
     ;;
     -h | *)
       ${0}
