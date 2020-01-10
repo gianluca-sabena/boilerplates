@@ -1,5 +1,16 @@
 # s3split
 
+s3split help to archive big datasets on s3 remote storage
+
+s3split allows to create big tar files (faster upload/download from s3 endpoint)
+
+s3split features:
+
+- splits datasets in different tar archive with a max size
+- splits files snd folder only on the first level (different dataset parts can be consumed independently)
+- uploads of split parts in parallel
+- generates index file
+
 ## Run
 
 - Activate env `pipenv shell`
@@ -14,6 +25,9 @@
 - Add a dev dependency `pipenv install pytest --dev`
 - Add current module `s3split` in editable mode with `pipenv install --dev -e .`
 - Run python and import s3split `pipenv run python -c 'import s3split.app; s3split.app.run_cli()'`
+- Test `pytest` (requires docker to run a [minio](https://minio.io) s3 backend)
+
+## Publish package
 
 ## Notes
 

@@ -1,12 +1,14 @@
 # pylint: disable=missing-function-docstring,unused-argument,redefined-outer-name
 """test full application"""
 from pprint import pformat
+from filecmp import dircmp
+import os
+import tempfile
 import pytest
 import s3split.common
 import s3split.main
 import s3split.s3util
 import common
-
 
 LOGGER = s3split.common.get_logger()
 
@@ -35,37 +37,41 @@ def test_minio_invalid_endpoint(docker_minio_fixture):
 
 @pytest.mark.args
 def test_minio_invalid_bucket(docker_minio_fixture):
-    n_files = 100
-    size = 1024
-    full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
-    common.generate_random_files(full_path, n_files, size)
     with pytest.raises(SystemExit, match=r'S3 URI must contains bucket and path s3://bucket/path'):
         assert s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
-                                      "--s3-endpoint", common.MINIO_ENDPOINT, "upload", full_path, "s3://ddd/"])
+                                      "--s3-endpoint", common.MINIO_ENDPOINT, "upload", "/tmp", "s3://ddd/"])
 
 
 @pytest.mark.full
 def test_minio_upload(docker_minio_fixture):
-    n_files = 200
+    n_files = 100
     size = 1024
-    full_path = f"/tmp/s3split-pytest/{n_files}f-{size}kb"
-    common.generate_random_files(full_path, n_files, size)
-    s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
-                           "--s3-endpoint", common.MINIO_ENDPOINT, "--threads", "2", "--stats-interval", "1",
-                           "upload", full_path, f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}", "--tar-size", "10"])
-    s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
-                           "--s3-endpoint", common.MINIO_ENDPOINT,
-                           "check", f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}"])
-    s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
-                           "--s3-endpoint", common.MINIO_ENDPOINT, "--threads", "2", "--stats-interval", "1",
-                           "download", f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}", "/tmp/s3split-download"])
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path_upload = f"{tmpdir}/upload"
+        path_download = f"{tmpdir}/download"
+        common.generate_random_files(path_upload, n_files, size)
+        common.generate_random_files(path_upload+"/dir_1", 5, size)
+        s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
+                               "--s3-endpoint", common.MINIO_ENDPOINT, "--threads", "2", "--stats-interval", "1",
+                               "upload", path_upload, f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}", "--tar-size", "10"])
+        # s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
+        #                        "--s3-endpoint", common.MINIO_ENDPOINT,
+        #                        "check", f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}"])
+        s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
+                               "--s3-endpoint", common.MINIO_ENDPOINT, "--threads", "2", "--stats-interval", "1",
+                               "download", f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}", path_download])
+        # os.remove('/tmp/s3split-download/file_1.txt')
+        dcmp = dircmp(path_upload, path_download)
+        LOGGER.info(pformat(dcmp.left_only))
+        LOGGER.info(pformat(dcmp.right_only))
+        LOGGER.info(pformat(dcmp.diff_files))
+        assert len(dcmp.left_only) == 0 and len(dcmp.right_only) == 0 and len(dcmp.diff_files) == 0
 
 # @pytest.mark.last
 # def test_minio_download(docker_minio_fixture):
 #     s3split.main.run_main(["--s3-secret-key", common.MINIO_SECRET_KEY, "--s3-access-key", common.MINIO_ACCESS_KEY,
 #                            "--s3-endpoint", common.MINIO_ENDPOINT,
 #                            "download", f"s3://{common.MINIO_BUCKET}/{common.MINIO_PATH}", "/tmp/s3split-download"])
-
 
     # download metadata
     # stats = s3split.s3util.Stats(1)
