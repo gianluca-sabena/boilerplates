@@ -108,24 +108,31 @@ class Action():
 
     def download(self):
         "download files from s3"
-        def _downloader(tmpdir, s3_obj, s3_size):
+        def _run_download(tmpdir, s3_obj, s3_size):
             def py_files(members):
                 for tarinfo in members:
                     # Remove container path added if someone open the archive on a desktop
                     tarinfo.name = tarinfo.name.replace('s3split', '').strip('/')
                     yield tarinfo
+            tar_file = os.path.join(tmpdir, os.path.basename(s3_obj))
+            self._logger.debug(f"(future) start download of s3 object '{s3_obj}' to local file '{tar_file}'")
             s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
                                                  self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
-            tar_file = os.path.join(tmpdir, os.path.basename(s3_obj))
-            self._logger.info(f"Start download in a thread for s3 object '{s3_obj}' to file '{tar_file}'")
-            with open(tar_file, 'wb') as file:
-                # self._fsuri
-                s3_obj = s3manager.download_file(s3_obj, s3_size, file)
-                file.close()
-            tar = tarfile.open(tar_file)
-            tar.extractall(path=self._fsuri, members=py_files(tar))
-            tar.close()
-            return s3_obj
+            if not self._event.is_set():
+                with open(tar_file, 'wb') as file:
+                    # self._fsuri
+                    self._logger.info(f"{s3_obj} downloading... ")
+                    s3manager.download_file(s3_obj, s3_size, file)
+                    file.close()
+                    self._logger.info(f"{s3_obj} download completed")
+                tar = tarfile.open(tar_file)
+                tar.extractall(path=self._fsuri, members=py_files(tar))
+                tar.close()
+                self._logger.info(f"{s3_obj} archive extracted")
+                return s3_obj
+            else:
+                self._logger.warning(f"{s3_obj} - download interrupted because Ctrl + C was pressed!")
+                return None
 
         if not os.path.isdir(self._fsuri):
             try:
@@ -133,7 +140,7 @@ class Action():
             except OSError as ex:
                 raise SystemExit(f"Creation of the directory {self._fsuri} failed - {ex}")
             else:
-                self._logger.info(f"Successfully created download directory {self._fsuri}")
+                self._logger.info(f"Created download directory {self._fsuri}")
         futures = {}
         downloaded = []
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -143,8 +150,7 @@ class Action():
                 # self._logger.info(pformat(metadata))
                 # TODO: probably it is safer to scan split ids, if one is missing we know the dataset is incoplete...
                 for s3_obj in metadata["tars"]:
-                    self._logger.info(f"Downloading {s3_obj['name']}")
-                    future = executor.submit(_downloader, tmpdir, s3_obj['name'], s3_obj['size'])
+                    future = executor.submit(_run_download, tmpdir, s3_obj['name'], s3_obj['size'])
                     futures.update({future: s3_obj['name']})
                 self._logger.debug(f"List of futures: {futures}")
                 for future in concurrent.futures.as_completed(futures):
@@ -152,11 +158,83 @@ class Action():
                         data = future.result()
                         downloaded.append(data)
                     except Exception as exc:  # pylint: disable=broad-except
-                        self._logger.error(f"Thread generated an exception: {exc}")
+                        self._logger.error(f"(future) generated an exception: {exc}")
                         traceback_str = traceback.format_exc(exc)
-                        self._logger.error(f"Thread generated an exception: {traceback_str}")
-                    else:
-                        self._logger.info(f"Download completed {data}")
+                        self._logger.error(f"(future) generated an exception: {traceback_str}")
+        self._stats.print()
+
+
+    def upload(self):
+        """upload splits to s3"""
+        def _run_upload(split):
+            """create a tar and upload"""
+            def tar_filter(tobj):
+                # Add a container path if someone open the archive on a desktop
+                new = tobj.name.replace(self._args.source.strip('/'), 's3split').strip('/')
+                tobj.name = new
+                return tobj
+
+            name_tar = s3split.common.gen_file_name(split.get('id'))
+            self._logger.debug(f"(future) start archive/upload for tar {name_tar}")
+            s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
+                                                self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
+            # Filter function to update tar path, required to untar in a safe location            
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tar_file = os.path.join(tmpdir, name_tar)
+                # Start tar
+                if not self._event.is_set():
+                    self._logger.info(f"{name_tar} archive creating... ")
+                    with tarfile.open(tar_file, "w") as tar:
+                        for path in split.get('paths'):
+                            # remove base path from folder with filter function
+                            tar.add(path, filter=tar_filter)
+                        tar.close()
+                    self._logger.info(f"{name_tar} archive completed")
+                # Start upload
+                if not self._event.is_set():
+                    self._logger.info(f"{name_tar} uploading... ")
+                    s3manager.upload_file(tar_file)
+                    self._logger.info(f"{name_tar} upload completed")
+                    return {"name": os.path.basename(tar_file),
+                            "id": split.get('id'), "size": os.path.getsize(tar_file)}
+                else:
+                    self._logger.warning(f"{name_tar} - archive/upload interrupted because Ctrl + C was pressed!")
+                    return None
+
+        self._logger.info(f"Tar object max size: {self._args.tar_size} MB")
+        self._logger.info(f"Upload started! Print stats evry: {self._args.stats_interval} seconds")
+        # Check if bucket is empty and if a metadata file is present
+        objects = self._s3_manager.list_bucket_objects()
+        if objects is not None and len(objects) > 0:
+            self._logger.warning(f"Remote S3 bucket is not empty!!!!!")
+            metadata = self._s3_manager.download_metadata()
+            if metadata is not None and len(metadata.get('splits')) > 0:
+                self._logger.warning("Remote S3 bucket contains a metadata file!")
+                # TODO: If there is a remote metadata? exit and force user to clean bucket?
+        # Upload metadata file
+        splits = s3split.common.split_file_by_size(self._args.source, self._args.tar_size)
+        tars_uploaded = []
+        future_split = {}
+        if not self._s3_manager.upload_metadata(splits):
+            self._logger.error("Metadata json file upload failed!")
+            raise SystemExit
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
+            for split in splits:
+                future = executor.submit(_run_upload, split)
+                future_split.update({future: split.get('id')})
+            self._logger.debug(f"List of futures: {future_split}")
+            for future in concurrent.futures.as_completed(future_split):
+                try:
+                    data = future.result()
+                    tars_uploaded.append(data)
+                except Exception as exc:  # pylint: disable=broad-except
+                    self._logger.error(f"Future generated an exception: {exc}")
+                    traceback_str = traceback.format_exc(exc)
+                    self._logger.error(f"Future generated an exception: {traceback_str}")
+                else:
+                    self._logger.debug(f"(future) fo Split: {data['id']} finished")
+        if not self._s3_manager.upload_metadata(splits, tars_uploaded):
+            raise SystemExit("Metadata json file upload failed!")
         self._stats.print()
 
     def check(self):
@@ -181,80 +259,3 @@ class Action():
                     f"Check size for split part {key} failed! Expected size: {val} comparade to s3 object size: {s3_data.get('key')} ")
                 errors = True
         return not errors
-
-
-
-    def upload(self):
-        """upload splits to s3"""
-        def _run_upload(split):
-            """create a tar and upload"""
-            def tar_filter(tobj):
-                # Add a container path if someone open the archive on a desktop
-                new = tobj.name.replace(self._args.source.strip('/'), 's3split').strip('/')
-                tobj.name = new
-                return tobj
-
-            self._logger.debug(f"Split: {split.get('id')} - Start processing")
-            s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                                                self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
-            name_tar = f"s3split-part-{split.get('id')}.tar"
-            # Filter function to update tar path, required to untar in a safe location
-            if not self._event.is_set():
-                self._logger.debug(f"Split: {split.get('id')} - Start create tar {name_tar}")
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    tar_file = os.path.join(tmpdir, name_tar)
-                    with tarfile.open(tar_file, "w") as tar:
-                        for path in split.get('paths'):
-                            # remove base path from folder with filter function
-                            tar.add(path, filter=tar_filter)
-                        tar.close()
-                        self._logger.debug(f"Split: {split.get('id')} - Generated tar file {tar_file}")
-                    # Start upload
-                    if not self._event.is_set():
-                        s3manager.upload_file(tar_file)
-                        return {"name": os.path.basename(tar_file),
-                                "id": split.get('id'), "size": os.path.getsize(tar_file)}
-                    self._logger.warning(f"Split: {split.get('id')} - Upload interrupted because Ctrl + C was pressed!")
-                    return None
-            else:
-                self._logger.warning(f"Split: {split.get('id')} - Tar interrupted because Ctrl + C was pressed!")
-                return None
-        self._logger.info(f"Tar object max size: {self._args.tar_size} MB")
-        self._logger.info(f"Upload started! Print stats evry: {self._args.stats_interval} seconds")
-        # Check if bucket is empty and if a metadata file is present
-        objects = self._s3_manager.list_bucket_objects()
-        if objects is not None and len(objects) > 0:
-            self._logger.warning(f"Remote S3 bucket is not empty!!!!!")
-            metadata = self._s3_manager.download_metadata()
-            if metadata is not None and len(metadata.get('splits')) > 0:
-                self._logger.warning("Remote S3 bucket contains a metadata file!")
-                # TODO: If there is a remote metadata? exit and force user to clean bucket?
-        # Upload metadata file
-        splits = s3split.common.split_file_by_size(self._args.source, self._args.tar_size)
-        tars_uploaded = []
-        future_split = {}
-        if not self._s3_manager.upload_metadata(splits):
-            self._logger.error("Metadata json file upload failed!")
-            raise SystemExit
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self._args.threads) as executor:
-            for split in splits:
-                # s3manager = s3split.s3util.S3Manager(self._args.s3_access_key, self._args.s3_secret_key, self._args.s3_endpoint,
-                #                                      self._args.s3_verify_ssl, self._s3uri.bucket, self._s3uri.object, self._stats.update)
-                #splitter = s3split.splitter.Splitter(self._event, s3manager, self._args.source, split)
-                future = executor.submit(_run_upload, split)
-                future_split.update({future: split.get('id')})
-            self._logger.debug(f"List of futures: {future_split}")
-            for future in concurrent.futures.as_completed(future_split):
-                try:
-                    data = future.result()
-                    tars_uploaded.append(data)
-                except Exception as exc:  # pylint: disable=broad-except
-                    self._logger.error(f"Thread generated an exception: {exc}")
-                    traceback_str = traceback.format_exc(exc)
-                    self._logger.error(f"Thread generated an exception: {traceback_str}")
-                else:
-                    self._logger.info(f"Split: {data['id']} Completed task processing")
-        self._logger.debug(f"Tars uploaded completed - tars: {tars_uploaded}")
-        if not self._s3_manager.upload_metadata(splits, tars_uploaded):
-            raise SystemExit("Metadata json file upload failed!")
-        self._stats.print()

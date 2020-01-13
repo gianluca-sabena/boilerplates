@@ -1,8 +1,6 @@
 # s3split
 
-s3split help to archive big datasets on s3 remote storage
-
-s3split allows to create big tar files (faster upload/download from s3 endpoint)
+s3split splits big datasets in different tar archives and uploads/downloads them to/from s3 remote storage
 
 s3split features:
 

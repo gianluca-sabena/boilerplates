@@ -58,12 +58,11 @@ class S3Manager():
     """Manage S3 connection with boto3"""
 
     def __init__(self, s3_access_key, s3_secret_key, s3_endpoint, s3_verify_ssl, s3_bucket, s3_path, cb_stats_update=None):
-        self._logger = s3split.common.get_logger()
+        #self._logger = s3split.common.get_logger()
         self._cb_stats_update = cb_stats_update
         self._session = boto3.session.Session()
         self.s3_bucket = s3_bucket
         self.s3_path = s3_path
-        #self.fs_path = fs_path
         self._s3_client = None
         # create client from session (thread safe)
         try:
@@ -81,7 +80,6 @@ class S3Manager():
 
     def _wrap_exception(self, ex):
         "exit when detect a fatal client exception"
-        self._logger.error(f"Boto3 client exception: {ex}")
         raise SystemExit(f"Fatal boto3 exception: {ex}")
 
     def get_client(self):
@@ -164,7 +162,6 @@ class S3Manager():
 
     def download_file(self, s3_object, s3_size, file):
         """download object from s3"""
-        self._logger.info(f"Start download of {s3_object}")
         full_path = os.path.join(self.s3_path, s3_object)
         progress = ProgressPercentage(self._cb_stats_update, full_path, s3_size)
         config = TransferConfig(multipart_threshold=1024 * 1024 * 64, max_concurrency=15,

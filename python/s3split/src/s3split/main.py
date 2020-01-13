@@ -13,26 +13,26 @@ import s3split.actions
 def parse_args(sys_args):
     """parse command line arguments"""
     parser = argparse.ArgumentParser(prog='s3split',
-                                     description='A python utility to tar and upload a group of objects (files or folders) to S3 endpoint')
-    parser.add_argument('--s3-secret-key', help='S3 secret key', required=True, default="")
-    parser.add_argument('--s3-access-key', help='S3 access key', required=True, default="")
+                                     description=('s3split splits big datasets in different tar archives'
+                                                  ' and uploads/downloads them to/from s3 remote storage'))
+    parser.add_argument('--s3-secret-key', help='S3 secret key', required=True)
+    parser.add_argument('--s3-access-key', help='S3 access key', required=True)
     parser.add_argument('--s3-endpoint', help='S3 endpoint full hostname in the form http(s)://myhost:port', required=True)
-    #parser.add_argument('--s3-use-ssl', help='S3 endpoint ssl', required=False, default=False)
     parser.add_argument('--s3-verify-ssl', help='verfiy S3 endpoint ssl certificate', required=False, default=True)
     parser.add_argument('--threads', help='Number of parallel threads ', required=False, type=int, default=5)
     parser.add_argument('--stats-interval', help='Seconds between two stats print', required=False, type=int, default=30)
     subparsers = parser.add_subparsers(dest='action')
-    parser_upload = subparsers.add_parser("upload", help="upload -h")
+    # Upload
+    parser_upload = subparsers.add_parser("upload", help="upload -h show more help")
     parser_upload.add_argument('source', help="Local filesystem directory")
     parser_upload.add_argument('target', help="S3 path in the form s3://bucket/path (path is required!)")
     parser_upload.add_argument('--tar-size', help='Max size in MB for a single split tar file', required=False, type=int, default=500)
-    parser_download = subparsers.add_parser("download", help="download -h")
+    # Download
+    parser_download = subparsers.add_parser("download", help="download -h show more help")
     parser_download.add_argument('source', help="S3 path in the form s3://bucket/path (path is required!)")
     parser_download.add_argument('target', help="Local filesystem directory")
-    # parser_upload.add_argument('--recovery', help='recovery upload if s3 bucket contains metadata file',
-    #                            required=False, type=bool, default=False)
-    parser_check = subparsers.add_parser("check", help="check -h")
-    #parser_check.add_argument('source', help="Local filesystem directory")
+    # Check
+    parser_check = subparsers.add_parser("check", help="check -h show more help")
     parser_check.add_argument('target', help="S3 path in the form s3://bucket/...")
     return parser.parse_args(sys_args)
 
