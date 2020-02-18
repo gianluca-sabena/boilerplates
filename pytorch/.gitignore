@@ -1,0 +1,6 @@
+runs/
+mnist_train/
+data/
+.venv
+.vscode
+models

@@ -2,6 +2,7 @@
 # Credit https://github.com/pytorch/examples/blob/master/mnist/main.py
 # and https://github.com/mlflow/mlflow/blob/master/examples/pytorch/mnist_tensorboard_artifact.py
 from __future__ import print_function
+from datetime import datetime
 import argparse
 import torch
 import torch.nn as nn
@@ -11,7 +12,7 @@ from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
 
 # Writer will output to ./runs/ directory by default
-writer = SummaryWriter()
+writer = SummaryWriter("runs/mnist-full/"+datetime.now().strftime('%Y-%m-%d-%H%M'))
 
 
 class Net(nn.Module):
@@ -136,6 +137,9 @@ def main():
     model = Net().to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 
+    images, _ = next(iter(train_loader))
+    writer.add_graph(model, images)
+
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, train_loader, optimizer, epoch)
         step = (epoch + 1) * len(train_loader)
@@ -143,6 +147,7 @@ def main():
 
     if (args.save_model):
         torch.save(model.state_dict(), "mnist_cnn.pt")
+
 
     writer.close()
 

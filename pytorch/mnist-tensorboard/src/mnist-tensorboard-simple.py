@@ -1,10 +1,16 @@
+#
+# From https://pytorch.org/docs/stable/tensorboard.html#torch-utils-tensorboard
+#
+# Need to add train see https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
+# 
+
 import torch
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
 
 # Writer will output to ./runs/ directory by default
-writer = SummaryWriter()
+writer = SummaryWriter("runs/mnist-simple")
 
 transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 trainset = datasets.MNIST('data', train=True, download=True, transform=transform)
