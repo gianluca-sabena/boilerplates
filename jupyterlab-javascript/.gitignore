@@ -1,0 +1,4 @@
+.local
+.venv
+node_modules/
+.ipynb_checkpoints
