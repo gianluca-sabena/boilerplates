@@ -12,7 +12,10 @@ Requirements:
 
 - Install everything with `pipenv install`
 - Run notebook `pipenv run jupyter notebook`
-- Convert notebooks to standalone apps `pipenv run voila`
+- Open voila at <http://localhost:8888/voila>
+
+## Convert notebook 
+- run `pipenv run voila <path-to-notebook> <options>`
 
 ## Image mouse click
 

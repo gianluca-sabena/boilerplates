@@ -1,17 +1,15 @@
 .DEFAULT_GOAL := help
 .PHONY: install-dev
 
-export NVM_DIR := .local/.nvm
-export JUPYTER_CONFIG_DIR := .local/.jupyterlab
+export ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+export JUPYTER_CONFIG_DIR := $(ROOT_DIR)/.local/jupyterlab/config
+export JUPYTER_PATH := $(ROOT_DIR)/.local/jupyterlab/path
+export JUPYTER_DATA_DIR := $(ROOT_DIR)/.local/jupyterlab/data
+export JUPYTER_RUNTIME_DIR := $(ROOT_DIR)/.local/jupyterlab/runtime
 
 install-dev:
 	@if [ ! -d ".venv" ]; then \
 	  pipenv install --dev; \
-	  [ -s "/usr/local/opt/nvm/nvm.sh" ] && . "/usr/local/opt/nvm/nvm.sh"; \
-		nvm install v12.16.1; \
-		nvm use v12.16.1; \
-		npm install -g tslab; \
-		pipenv run tslab install; \
 	fi
 
 activate: install-dev
@@ -20,8 +18,8 @@ activate: install-dev
 clean:
 	rm -rf .venv
 
-jupyterlab: install-dev
-	pipenv run jupyter lab --notebook-dir=notebooks
+jupyter-notebook: install-dev
+	pipenv run jupyter notebook --notebook-dir=notebooks
 
 # credits https://stackoverflow.com/a/26339924/7568979
 help:
