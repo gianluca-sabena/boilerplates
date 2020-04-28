@@ -9,7 +9,6 @@ Tools:
 
 ### Flask
 
-- `cd hello-world-pipenv`
 - `export FLASK_APP=src/web.py`
 - `pipenv run flask run`
 
