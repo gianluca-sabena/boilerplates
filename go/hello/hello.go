@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"rsc.io/quote"
+
 	"github.com/you/hello/msg"
+	"rsc.io/quote"
 )
 
 func main() {
