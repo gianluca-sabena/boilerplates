@@ -1,0 +1,24 @@
+FROM centos:7.6.1810
+
+# ENV
+ENV DOCKER_CLIENT_VERSION="1.10.3" \
+    NODE_VERSION="10.16.0" \ 
+    NVM_VERSION="0.34.0"
+
+RUN rpmkeys --import file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7 && \
+    yum -y install wget tar curl which git unzip docker openssh-clients git \
+    && echo -e "\n ### ### ### Docker client ### ### ###  \n" \
+    && curl -sS https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_CLIENT_VERSION} > /usr/local/bin/docker  \
+    && chmod 0777 /usr/local/bin/docker \
+    && echo -e "\n ### ### ### NODEJS ### ### ###  \n" \
+    && curl -sS -o- https://raw.githubusercontent.com/creationix/nvm/v${NVM_VERSION}/install.sh | bash \
+    && source "${HOME}/.bashrc" \
+    && nvm install ${NODE_VERSION} \
+    && nvm alias default ${NODE_VERSION} \
+    && nvm use default \
+    && echo -e "\n ### ### ### NPM  ### ### ###  \n" \
+    && npm install -g npm \
+    && echo -e "\n ### ### ### Clean  ### ### ###  \n" \
+    && yum -y clean all
+
+ENV NVM_DIR="/root/.nvm"
